@@ -14,7 +14,9 @@ import java.util.List;
  * vision-align, 2026-11-23). Old name: {@code PreloadRouteAuto} ("Preload + Park (Odometry)").
  * <p>
  * LEAVE 10 cm and shoot at {@link NearRoutePoses#SHOOT_SPOT}, then park through the lane west of
- * the HIVE: back 5 cm, right 60 cm, back 230 cm, right 60 cm. The heading stays at -90 degrees
+ * the HIVE: back 5 cm, right 60 cm, back 230 cm, right 56.5 cm ({@code AutoConstants.RIGHT_2_CM};
+ * the tested run used 60 cm, shortened so the robot ends 2 in off the wall for LEAVE).
+ * The heading stays at -90 degrees
  * the whole way (the robot slides sideways and backwards, never turns).
  * <p>
  * On the field this route is driven leg by leg with {@code pathing.OdometryDriver} (use
