@@ -25,8 +25,8 @@ import java.util.List;
  * start delay.
  * <ul>
  *     <li>NEAR: LEAVE 10 cm, then the TESTED park legs through the west lane.</li>
- *     <li>FAR: backwards down the side wall into the LOADING ZONE (beta {@code ParkAuto},
- *     ends ~0.6 in from the wall: LEAVE may not count, see the hand-off).</li>
+ *     <li>FAR: backwards down the side wall into the LOADING ZONE (beta {@code ParkAuto}),
+ *     ending at x 12.0: 2 in off the wall plus a 1 in margin, so LEAVE counts.</li>
  *     <li>LOADING ZONE: start just behind the zone tape (G304.E forbids starting inside it),
  *     front against the side wall; back off 10 cm (LEAVE), then slide along the wall into the
  *     zone (PARK), staying off the wall.</li>

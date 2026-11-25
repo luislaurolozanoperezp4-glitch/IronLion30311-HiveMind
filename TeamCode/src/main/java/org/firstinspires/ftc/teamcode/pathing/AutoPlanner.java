@@ -26,7 +26,7 @@ import java.util.List;
  *   reserve)  AND  cycles done &lt; MAX_CYCLES  AND  balls are available   -&gt;  CYCLE_AGAIN
  *   otherwise                                                              -&gt;  GO_PARK
  * </pre>
- * During any step, {@link #mustParkNow(double)} says when to abort the step and park.
+ * During any step, {@link #shouldParkNow(double)} says when to abort the step and park.
  * The fixed deadlines tested on the field (for example "collect only if it starts before 11 s")
  * stay as a backstop through {@link #isBeforeDeadline(double)}.
  * <p>
@@ -85,7 +85,7 @@ public class AutoPlanner {
      * @param parkSeconds estimated time to park from the current pose
      * @return true if the robot must start parking now
      */
-    public boolean mustParkNow(double parkSeconds) {
+    public boolean shouldParkNow(double parkSeconds) {
         return !timer.hasTimeFor(parkSeconds);
     }
 

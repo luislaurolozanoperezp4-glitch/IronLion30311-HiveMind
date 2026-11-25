@@ -133,6 +133,7 @@ public class TuneFlowerSweeper extends OpMode {
         telemetry.addData("Left", describe(leftPosition));
         telemetry.addData("Right", describe(rightPosition));
         telemetry.addData("Mode", isManual ? "MANUAL (D-pad)" : "SWEEPER " + sweeper.getState());
+        telemetry.addLine("Changed values stay in use until the app restarts (competition OpModes too): copy them into config/");
         telemetry.addLine("D-pad up/down coarse | right/left fine | X = save UP | Y = save DOWN"
                 + " | A = go UP | B = go DOWN");
         telemetry.addLine(String.format(Locale.US, "Copy into FlowerSweeperConstants: LEFT_UP %.3f,"

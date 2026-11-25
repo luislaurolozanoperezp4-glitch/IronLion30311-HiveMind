@@ -39,7 +39,7 @@ Paths are under `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/` unless 
 
 | Item | Level | Candidates | Winner | Reason | New name | Changes needed |
 |---|---|---|---|---|---|---|
-| Source of truth for the new repo | repository | legacy repo #1 (`IronLion30311BIOBUZZInicioDeTemporada`); repo #2 `pedro-pathing-biobuzz-analysis-a65cc9` (worktree of `BETA`) | **repo #1** | Repo #2 has the same files as `BETA` @ `206fa84` plus one `@Disabled` (RP header, `docs/snapshots/pedro-worktree-uncommitted.diff`). Every unique line in it is also in repo #1. | `IronLion30311-HiveMind` (new) | Start a clean history. Archive repo #1 with a tag for each mined ref (`archive/<branch>`) before deleting branches. Import the `@Disabled` decision only as a note (Shoot Turn Collect is not migrated as is, see §4). |
+| Source of truth for the new repo | repository | legacy repo #1 (`IronLion30311BIOBUZZInicioDeTemporada`); repo #2 `pedro-pathing-biobuzz-analysis-a65cc9` (worktree of `BETA`) | **repo #1** | Repo #2 has the same files as `BETA` @ `206fa84` plus one uncommitted `@Disabled` on `ShootTurnCollectAuto` (RP header; diff kept local, not committed). Every unique line in it is also in repo #1. | `IronLion30311-HiveMind` (new) | Start a clean history. Archive repo #1 with a tag for each mined ref (`archive/<branch>`) before deleting branches. Import the `@Disabled` decision only as a note (Shoot Turn Collect is not migrated as is, see §4). |
 | Local-only refs | repository | `localcopy/auto-shooter` (`d4642a0`), `localcopy/bm`, `localcopy/*` backups | `AS` mined; the rest archived | `AS` is the only local ref with unique code (AM §1 #4) | — | Push `AS` to a remote archive tag **before** the laptop is wiped (DECISION D18). |
 | Branch hygiene | repository | `origin/CSV` vs `origin/csv` (case clash), orphan `localcopy/bm`, 4 scripted `luis/*` duplicates | — | AM §6.7 | — | The new repo has `main` + short-lived `feature/<topic>` only (no person names in branch names). |
 
@@ -192,10 +192,10 @@ The full conflict table is §3. The single-source constants are listed per class
 
 | Doc | Source | Winner | New path | Changes |
 |---|---|---|---|---|
-| `CONVENTIONS.md` | VA | keep | `docs/CONVENTIONS.md` | Add the method rules of this matrix (§2 header) |
+| `CONVENTIONS.md` | VA | keep | ~~`docs/CONVENTIONS.md`~~ → **superseded by `docs/NAMING.md`** | Method rules live in NAMING.md |
 | `doc/naming/rename-map.md` | VA | keep | `docs/naming/rename-map.md` | Append §6 |
 | `PROJECT_CONTEXT.md` | VA/MASTER/NCAM | REPLACE | `docs/ROBOT_PROFILE.md` (already written) | Stale content |
-| `DRIVE_MODES_REFERENCE.md` (×2) | MASTER | merge one copy | `docs/DRIVE_MODES.md` | Update bindings to the VA TeleOp |
+| `DRIVE_MODES_REFERENCE.md` (×2) | MASTER | merge one copy | ~~`docs/DRIVE_MODES.md`~~ → **superseded by README "Controls"** | Bindings documented in README and `docs/agents/teleop.md` |
 | `docs/autonomos-cancha.html` | BETA (`6aa75b`), AS (`95792a`) | refactor | `docs/auto-routes.html` | Fix alliance labels; draw territory line x = 72, LZs, HIVE box, FLOWERS |
 | `juego-del-robot-biobuzz.md`, `mapa-cancha-odometria-biobuzz.md` | NCAM (inside the Java package) | keep, translate | `docs/game-rules.md`, `docs/field-coordinates.md` | English; add the Pedro-frame conversion table (AP §5.1) |
 | `PLAN.md`, `NOTAS_AUTONOMOS.md` | TA | keep as history only | `docs/archive/auto-notes.md` | Translate the time-budget part |

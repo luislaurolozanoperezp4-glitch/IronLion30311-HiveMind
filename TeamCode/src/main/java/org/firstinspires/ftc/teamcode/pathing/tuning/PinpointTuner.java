@@ -1,4 +1,4 @@
-// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/pathing/tuning/PinpointTuner.java @ a7b8f4c (whole file) — vendored from the Pedro Pathing Quickstart, only the package changed
+// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/pathing/tuning/PinpointTuner.java @ a7b8f4c (whole file) — vendored from the Pedro Pathing Quickstart, only the package changed (plus the default Pinpoint name from RobotConstants, review finding #8)
 // Copied unchanged (except the package) from the Pedro Pathing Quickstart,
 // https://github.com/Pedro-Pathing/Quickstart (BSD-3-Clause-Clear), for AutoTune.
 // Update it from there instead of editing it here.
@@ -11,6 +11,8 @@ import com.pedropathing.tuning.autotune.Inputs;
 import com.pedropathing.tuning.autotune.Procedure;
 import com.pedropathing.tuning.autotune.TuningOpMode;
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+
+import org.firstinspires.ftc.teamcode.config.RobotConstants;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 import java.util.*;
@@ -28,7 +30,7 @@ public class PinpointTuner extends Procedure {
     @Override
     public void run() throws InterruptedException {
         Inputs inputs = inputs("Setup", "Set Pinpoint HardwareMap Name and Odometry Pod Type");
-        Inputs.Field<String> pinpointName = inputs.s("HardwareMap Name").withDefault("pinpoint");
+        Inputs.Field<String> pinpointName = inputs.s("HardwareMap Name").withDefault(RobotConstants.PINPOINT);
         Inputs.Field<PodType> podType = inputs.e("Odometry Pod Type", PodType.class).withDefault(PodType.FOUR_BAR);
         awaitInputs(inputs);
 

@@ -96,7 +96,7 @@ Ref shorthand used below:
 |---|---|---|
 | `VA` | `origin/feature/turrubiates/vision-align` (a7b8f4c, 2026-11-24) | Newest. Tested on the real robot 2026-11-19 → 11-24 |
 | `MASTER` | `origin/master` (37b7a16, 2026-11-22) = merge of `feature/autonomos-beta` (206fa84) | Pedro autos checked in a path simulator only |
-| `WT` | `legacy/pedro-pathing-biobuzz-analysis-a65cc9` | Same files as 206fa84, plus one uncommitted change: `@Disabled` on `ShootTurnCollectAuto` (see `docs/snapshots/pedro-worktree-uncommitted.diff`) |
+| `WT` | `legacy/pedro-pathing-biobuzz-analysis-a65cc9` | Same files as 206fa84, plus one uncommitted change: `@Disabled` on `ShootTurnCollectAuto` (diff kept local, not committed) |
 | `NCAM` | `origin/feature/mar/duopodriveNcam` (2d92fba, 2026-11-21) | Mar's odometry + camera line (local copy c73454f, 11-19) |
 | `DUO` | `origin/feature/mar/duopodrive` (38caa7f, 2026-11-22) | Two pods, not calibrated |
 | `ONE` | `origin/feature/mar/onepodrive` (898e0da, 2026-11-11) | One pod only (Y pod broken at the time) |

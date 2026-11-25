@@ -50,7 +50,7 @@ failure, camera status and battery.
   AND the TESTED 11 s backstop → CYCLE_AGAIN or GO_PARK (logged with the numbers). The cycle
   estimate counts driving + a 1-ball volley (`CYCLE_MIN_PLANNED_BALLS`), because each volley is
   time-boxed by its deadline (22 s / 26.5 s). The early TIP watch only uses the spare time.
-- **Time guard**: every loop, if `planner.mustParkNow(EmergencyPark.estimateSeconds(pose))`, the
+- **Time guard**: every loop, if `planner.shouldParkNow(EmergencyPark.estimateSeconds(pose))`, the
   current step is cancelled, mechanisms stop and `EmergencyPark` drives: sideways into the west
   lane (x 33.4) → up the lane → PARK; straight to PARK when north of the HIVE. No turns (safe near
   walls). Tested: never closer than the robot circle to the HIVE, never past the territory line.

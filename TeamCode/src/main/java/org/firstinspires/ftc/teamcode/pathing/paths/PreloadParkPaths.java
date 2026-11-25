@@ -45,7 +45,7 @@ public class PreloadParkPaths extends RoutePaths {
     /** @return the waypoints of the park legs in order, for the odometry driver */
     public List<Pose> getParkWaypoints() {
         return Arrays.asList(toField(NearRoutePoses.BACK_OFF_2), toField(NearRoutePoses.WEST_LANE_SOUTH),
-                toField(NearRoutePoses.WEST_LANE_NORTH), toField(NearRoutePoses.PARK));
+                toField(NearRoutePoses.PRELOAD_LANE_NORTH), toField(NearRoutePoses.PRELOAD_PARK));
     }
 
     /** @return LEAVE: start to the shooting spot, 10 cm off the wall */
@@ -64,9 +64,10 @@ public class PreloadParkPaths extends RoutePaths {
                 lineConstant(NearRoutePoses.SHOOT_SPOT, NearRoutePoses.BACK_OFF_2, NearRoutePoses.BACK_OFF_2),
                 lineConstant(NearRoutePoses.BACK_OFF_2, NearRoutePoses.WEST_LANE_SOUTH,
                         NearRoutePoses.WEST_LANE_SOUTH),
-                lineConstant(NearRoutePoses.WEST_LANE_SOUTH, NearRoutePoses.WEST_LANE_NORTH,
-                        NearRoutePoses.WEST_LANE_NORTH),
-                lineConstant(NearRoutePoses.WEST_LANE_NORTH, NearRoutePoses.PARK, NearRoutePoses.PARK));
+                lineConstant(NearRoutePoses.WEST_LANE_SOUTH, NearRoutePoses.PRELOAD_LANE_NORTH,
+                        NearRoutePoses.PRELOAD_LANE_NORTH),
+                lineConstant(NearRoutePoses.PRELOAD_LANE_NORTH, NearRoutePoses.PRELOAD_PARK,
+                        NearRoutePoses.PRELOAD_PARK));
     }
 
     /**
@@ -79,6 +80,6 @@ public class PreloadParkPaths extends RoutePaths {
      */
     @Deprecated
     public Path parkStraight() {
-        return lineConstant(NearRoutePoses.SHOOT_SPOT, NearRoutePoses.PARK, NearRoutePoses.PARK);
+        return lineConstant(NearRoutePoses.SHOOT_SPOT, NearRoutePoses.PRELOAD_PARK, NearRoutePoses.PRELOAD_PARK);
     }
 }
