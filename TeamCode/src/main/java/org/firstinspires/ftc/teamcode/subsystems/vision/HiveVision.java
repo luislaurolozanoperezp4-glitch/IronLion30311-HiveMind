@@ -99,7 +99,7 @@ public class HiveVision {
         // Parse individual tag poses projected onto the horizontal floor frame:
         // tagById[id] = {strafeX, forwardZ, yawDeg, is3D, rollDeg, imageUpDeg, rawYawDeg}
         double[][] tagById = new double[HiveCell.MAX_TAG_ID + 1][];
-        boolean anyHiveTagFound = false;
+        boolean hasHiveTag = false;
         StringBuilder tagIds = new StringBuilder();
         double distanceSumMeters = 0.0;
         int distanceCount = 0;
@@ -125,7 +125,7 @@ public class HiveVision {
             double[] floorPose = HiveGeometry.extractTagFloorPose(fiducial);
             if (floorPose != null) {
                 tagById[id] = floorPose;
-                anyHiveTagFound = true;
+                hasHiveTag = true;
             }
         }
 
@@ -134,7 +134,7 @@ public class HiveVision {
             rawTagDistanceMeters = distanceSumMeters / distanceCount;
         }
 
-        if (!anyHiveTagFound) {
+        if (!hasHiveTag) {
             handleMissingDetection();
             return;
         }

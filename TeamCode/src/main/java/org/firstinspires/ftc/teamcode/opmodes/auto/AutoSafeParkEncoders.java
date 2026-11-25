@@ -13,6 +13,8 @@ import org.firstinspires.ftc.teamcode.util.GamepadEx;
 import org.firstinspires.ftc.teamcode.util.MatchTimer;
 import org.firstinspires.ftc.teamcode.util.PoseStorage;
 
+import java.util.Locale;
+
 /**
  * Fallback auto that needs no Pinpoint, no Pedro and no cameras: LEAVE (3 points) on the wheel
  * encoders only. Use it when the odometry is broken.
@@ -119,7 +121,7 @@ public class AutoSafeParkEncoders extends OpMode {
         }
         drivetrain.periodic();
         lights.periodic();
-        telemetry.addData("State", !hasStarted ? String.format("Start delay (%.1f s left)",
+        telemetry.addData("State", !hasStarted ? String.format(Locale.US, "Start delay (%.1f s left)",
                 selector.getStartDelaySeconds() - elapsed)
                 : leaveMove.isDone() ? "Done: holding off the wall (LEAVE)" : "LEAVE move");
         telemetry.addData("LEAVE", leaveMove.getResultText());

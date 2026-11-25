@@ -43,7 +43,7 @@ public class SlewRateLimiter {
      * @param accelSeconds time to ramp from 0 to 1
      * @param decelSeconds time to ramp from 1 to 0
      */
-    public void setRampSeconds(double accelSeconds, double decelSeconds) {
+    public final void setRampSeconds(double accelSeconds, double decelSeconds) {
         this.accelSeconds = Math.max(0.0, accelSeconds);
         this.decelSeconds = Math.max(0.0, decelSeconds);
     }

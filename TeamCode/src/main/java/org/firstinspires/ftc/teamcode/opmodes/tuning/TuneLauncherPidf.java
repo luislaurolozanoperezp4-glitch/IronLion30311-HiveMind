@@ -19,6 +19,8 @@ import org.firstinspires.ftc.teamcode.util.DataLogger;
 import org.firstinspires.ftc.teamcode.util.GamepadEx;
 import org.firstinspires.ftc.teamcode.util.GamepadEx.Button;
 
+import java.util.Locale;
+
 /**
  * Holds a flywheel at a target RPM so the velocity PIDF can be tuned, with a live graph.
  * <p>
@@ -232,7 +234,7 @@ public class TuneLauncherPidf extends OpMode {
         telemetry.addData("Target / actual", "%.0f / %.0f RPM (error %.0f)%s", selectedTarget(),
                 selectedRpm(), selectedTarget() - selectedRpm(), wasReady ? " READY" : "");
         telemetry.addData("Spin-up time", Double.isNaN(lastSpinUpSec) ? "-"
-                : String.format("%.2f s", lastSpinUpSec));
+                : String.format(Locale.US, "%.2f s", lastSpinUpSec));
         telemetry.addData("Gain (Y, RB+/LB-)", "%s | P %.2f  I %.2f  D %.2f  F@12V %.2f (applied %.2f)",
                 selectedGain, LauncherConstants.KP, LauncherConstants.KI, LauncherConstants.KD,
                 LauncherConstants.KF_AT_12V, launcher.getAppliedKf());
