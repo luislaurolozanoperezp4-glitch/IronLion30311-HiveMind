@@ -103,8 +103,15 @@ public class MatchTimer {
                 && getRemainingSeconds() <= MatchConstants.NECTAR_UNLOCK_SECONDS;
     }
 
-    /** G410: NECTAR may go into FLOWERS only during the last 60 seconds of TELEOP. */
+    /**
+     * G410: NECTAR may go into FLOWERS only during the last 60 seconds of the MATCH (= of
+     * TELEOP). Unlocks {@link MatchConstants#NECTAR_UNLOCK_MARGIN_SECONDS} later than that, because
+     * this clock starts at the driver's START press, not with the FIELD timer.
+     */
     public boolean canPlaceNectar() {
-        return isEndgame() && getRemainingSeconds() > 0.0;
+        double remaining = getRemainingSeconds();
+        return isEndgame() && remaining > 0.0
+                && remaining <= MatchConstants.NECTAR_UNLOCK_SECONDS
+                - MatchConstants.NECTAR_UNLOCK_MARGIN_SECONDS;
     }
 }

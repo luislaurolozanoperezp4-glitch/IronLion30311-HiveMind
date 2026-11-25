@@ -1,6 +1,6 @@
 // Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PreloadRouteAuto.java @ a7b8f4c (near start, TESTED)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/autonomos-beta / TeamCode/.../opmodes/auto/ParkAuto.java @ 206fa84 (far start)
-//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/auto-leave-park / TeamCode/.../opmodes/auto/LeaveParkAuto.java @ e455142 (start inside the LOADING ZONE, front to the wall)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/auto-leave-park / TeamCode/.../opmodes/auto/LeaveParkAuto.java @ e455142 (start inside the LOADING ZONE, front to the wall; moved out of the zone for G304.E)
 //          — adapted for BIOBUZZ
 package org.firstinspires.ftc.teamcode.opmodes.auto;
 
@@ -16,10 +16,13 @@ import org.firstinspires.ftc.teamcode.config.FieldConstants;
 public enum StartPosition {
     /** Against the audience wall, front (intake) to the wall. TESTED (4/4 preload run). */
     NEAR("Near (audience wall, x 57)", FieldConstants.NEAR_START),
-    /** Against the red wall, tile A6, facing the back wall. UNTESTED (decision D21). */
+    /** Against the red wall, tile A6, facing the back wall. UNTESTED (team definition, D21). */
     FAR("Far (red wall, tile A6)", FieldConstants.FAR_START),
-    /** Inside the LOADING ZONE, front to the red wall. Position TODO: TUNE. */
-    LOADING_ZONE("Loading zone (front to the red wall)", new Pose(AutoConstants.LOADING_ZONE_START_X,
+    /**
+     * Beside (behind) the LOADING ZONE, front to the red wall. It used to start inside the zone,
+     * which G304.E forbids (manual TU10). Position TODO: TUNE.
+     */
+    LOADING_ZONE("Beside loading zone (front to red wall, behind the tape)", new Pose(AutoConstants.LOADING_ZONE_START_X,
             AutoConstants.LOADING_ZONE_START_Y, Math.toRadians(AutoConstants.LOADING_ZONE_START_HEADING_DEG)));
 
     private final String label;

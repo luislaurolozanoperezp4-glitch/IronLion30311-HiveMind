@@ -15,8 +15,8 @@ BETA = `feature/autonomos-beta @ 206fa84` (`ParkAuto`).
 |---|---|---|---|---|
 | `Auto Red Near` / `Auto Blue Near` | `AutoRedNear`, `AutoBlueNear` (→ `ScoringAuto`) | NEAR (57, 9, −90°) | LEAVE 10 cm → 4 POLLEN at 2950 RPM (ends by 22 s) → planner: collect cycle or TESTED park legs. Cycle: early TIP watch → collect row → TIP seen: other cell (before 15 s) / no TIP: back, re-center, TIP check → shoot here or other cell → park | Preload + park TESTED 4/4; cycle part partly tested (VA logs) |
 | `Auto Red Far` / `Auto Blue Far` | `AutoRedFar`, `AutoBlueFar` (→ `ScoringAuto`) | FAR (8.96, 131.19, 90°) | To the other-cell spot north of the HIVE → cell seen: Limelight approach + shoot 4 there; not seen: down the west lane to the near spot and shoot → planner: cycle or park | **UNTESTED** (D21) |
-| `Auto Safe Park` | `AutoSafePark` | NEAR / FAR / LOADING ZONE (chosen in INIT) | LEAVE + PARK only, no shooting (NEAR: tested legs; FAR: down the wall; LZ: back 10 cm) | NEAR legs tested; FAR/LZ untested |
-| `Auto Safe Park Encoders` | `AutoSafeParkEncoders` | inside the LOADING ZONE, front to the side wall | 10 cm back on wheel encoders, 0.6 s hard timeout; no Pinpoint/Pedro/cameras | ALP logic (field use unknown) |
+| `Auto Safe Park` | `AutoSafePark` | NEAR / FAR / LOADING ZONE (chosen in INIT) | LEAVE + PARK only, no shooting (NEAR: tested legs; FAR: down the wall; LZ: start BEHIND the zone tape (G304.E), back 10 cm, slide into the zone) | NEAR legs tested; FAR/LZ untested |
+| `Auto Safe Park Encoders` | `AutoSafeParkEncoders` | front to the side wall, just behind the LOADING ZONE tape (G304.E forbids starting inside) | 10 cm back on wheel encoders (LEAVE only, no PARK), 0.6 s hard timeout; no Pinpoint/Pedro/cameras | ALP logic (field use unknown) |
 
 `preselectTeleOp`: `TeleOp Red` / `TeleOp Blue` for the four alliance autos. The two Safe Park
 autos choose the alliance in INIT, so they have no preselect (pick the TeleOp by hand).
@@ -86,8 +86,8 @@ failure, camera status and battery.
 ## Open questions
 
 1. D21: is the FAR start legal (G304, touching the wall)? Far route and its vision fallback untested.
-2. FAR Safe Park ends 0.6 in from the wall and the near PARK 0.8 in: LEAVE may not count
-   (pathing open question 2). `LOADING_ZONE_START_*` must be measured.
+2. Fixed by the rules agent (team decision): every competition park now ends >= 2 in off the wall
+   (near PARK `RIGHT_2_CM` 60 -> 56.5, FAR Safe Park x 12). Re-test on the robot. `LOADING_ZONE_START_*` must be measured.
 3. Planner seeds (`CRUISE_INCHES_PER_SECOND`, `FEED_SECONDS_PER_BALL`, `CYCLE_MIN_PLANNED_BALLS`):
    tune from the CSV "Planner at …" lines. With the seeds (cycle ~13.9 s + park ~4.8 s + 4 s
    reserve) a preload volley ending after ~7.2 s skips the

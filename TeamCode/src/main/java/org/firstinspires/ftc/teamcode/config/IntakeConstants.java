@@ -32,12 +32,13 @@ public final class IntakeConstants {
     public static final double RAMP_MAX_DT_SECONDS = 0.1;
 
     /**
-     * G408 helper: when the HuskyLens sees the opponent's NECTAR in front of the intake while
-     * collecting, the intake runs outward this long to push it away. TODO: TUNE
+     * G408 helper (team decision 2026-11-25): when the HuskyLens sees the opponent's NECTAR in
+     * front of the intake while collecting, the intake stops (never pushes it out) and stays
+     * stopped until the ball has been out of view this long. TODO: TUNE
      */
-    public static double REJECT_EJECT_SECONDS = 0.5;
-    /** Set false to turn the opponent-NECTAR rejection off. TODO: TUNE (needs field test) */
-    public static boolean REJECT_OPPONENT_NECTAR = true;
+    public static double OPPONENT_NECTAR_HOLD_SECONDS = 0.3;
+    /** Set false to turn the opponent-NECTAR stop off. TODO: TUNE (needs field test) */
+    public static boolean STOP_FOR_OPPONENT_NECTAR = true;
 
     // ---------------- AUTO collect (CollectSequence), TESTED partially in PreloadCollectAuto ----------------
     /** Forward power while driving onto a ball the HuskyLens sees. */

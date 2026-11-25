@@ -73,7 +73,7 @@ public final class VisionConstants {
     /** Two pickups closer than this are the same ball seen twice. */
     public static double BALL_MIN_PICKUP_INTERVAL_SECONDS = 0.25;
     /**
-     * A NECTAR ball at least this far down the image counts as "at the intake" (G408 rejection
+     * A NECTAR ball at least this far down the image counts as "at the intake" (G408 intake stop
      * and the NECTAR alert). TODO: TUNE
      */
     public static double INTAKE_ZONE_Y_OFFSET = 0.35;

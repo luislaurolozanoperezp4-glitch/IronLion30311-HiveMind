@@ -20,14 +20,14 @@ import org.firstinspires.ftc.teamcode.config.FieldConstants;
  * BACK_OFF_2              (57.000, 14.906,  -90)
  * WEST_LANE_SOUTH (right1)(33.378, 14.906,  -90)
  * WEST_LANE_NORTH (long)  (33.378,105.457,  -90)
- * PARK (right2)           ( 9.756,105.457,  -90)   PARK (TESTED)
+ * PARK (right2)           (11.134,105.457,  -90)   PARK (2.1 in off the wall; TESTED at x 9.756)
  * COLLECT_START           (33.378, 12.937,  180)
  * COLLECT_END             ( 9.756, 12.937,  180)
  * COLLECT_EXIT            (23.929, 29.866,  180)
  * SOUTH_WAYPOINT          (33.378, 40.496,  -90)
  * NORTH_WAYPOINT          (33.378,110.181,   90)
  * OTHER_SPOT              (57.000,125.157,   90)
- * OTHER_PARK              ( 9.756,105.457,   90)
+ * OTHER_PARK              (11.134,105.457,   90)
  * </pre>
  */
 public final class NearRoutePoses {
@@ -72,7 +72,7 @@ public final class NearRoutePoses {
     /** North end of the west lane (the original "longBack"). TESTED. */
     public static final Pose WEST_LANE_NORTH = relative(BACK_AFTER_LONG, AutoConstants.RIGHT_1_CM,
             START_HEADING_DEG);
-    /** PARK in the red LOADING ZONE (the original "right2"). TESTED. */
+    /** PARK in the red LOADING ZONE (the original "right2"), 2 in off the wall for LEAVE. */
     public static final Pose PARK = relative(BACK_AFTER_LONG,
             AutoConstants.RIGHT_1_CM + AutoConstants.RIGHT_2_CM, START_HEADING_DEG);
     /** Pass-through waypoint south-west of the HIVE. */

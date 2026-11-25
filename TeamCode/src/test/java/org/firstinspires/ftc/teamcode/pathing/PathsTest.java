@@ -14,6 +14,7 @@ import org.firstinspires.ftc.teamcode.config.RobotConstants;
 import org.firstinspires.ftc.teamcode.pathing.paths.NearRoutePoses;
 import org.firstinspires.ftc.teamcode.pathing.paths.PathCatalog;
 import org.firstinspires.ftc.teamcode.pathing.paths.RoutePaths;
+import org.firstinspires.ftc.teamcode.testutil.RuleGeometry;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.junit.Test;
 
@@ -131,11 +132,13 @@ public class PathsTest {
                 continue;
             }
             Pose end = entry.build(Alliance.RED).get(1.0);
-            assertTrue(entry.getName() + " ends outside the red LOADING ZONE: " + end,
-                    end.x() >= FieldConstants.RED_LOADING_ZONE_MIN_X
-                            && end.x() <= FieldConstants.RED_LOADING_ZONE_MAX_X
-                            && end.y() >= FieldConstants.RED_LOADING_ZONE_MIN_Y
-                            && end.y() <= FieldConstants.RED_LOADING_ZONE_MAX_Y);
+            assertTrue(entry.getName() + " robot ends outside the red LOADING ZONE: " + end,
+                    RuleGeometry.overlapsRedLoadingZone(end));
+            if (entry.use == PathCatalog.Use.COMPETITION) {
+                // Team decision: competition parks end >= WALL_CLEARANCE_INCHES off the wall (LEAVE).
+                assertTrue(entry.getName() + " ends too close to the wall for LEAVE: " + end,
+                        RuleGeometry.wallGap(end) >= FieldConstants.WALL_CLEARANCE_INCHES - EPSILON);
+            }
         }
     }
 
@@ -176,7 +179,8 @@ public class PathsTest {
         assertPose(NearRoutePoses.SHOOT_SPOT, 57.000, 12.937);
         assertPose(NearRoutePoses.WEST_LANE_SOUTH, 33.378, 14.906);
         assertPose(NearRoutePoses.WEST_LANE_NORTH, 33.378, 105.457);
-        assertPose(NearRoutePoses.PARK, 9.756, 105.457);
+        // PARK moved from the TESTED x 9.756 to 2 in off the wall (team decision, RIGHT_2_CM 60 -> 56.5)
+        assertPose(NearRoutePoses.PARK, 11.134, 105.457);
         assertPose(NearRoutePoses.COLLECT_END, 9.756, 12.937);
         assertPose(NearRoutePoses.COLLECT_EXIT, 23.929, 29.866);
         assertPose(NearRoutePoses.NORTH_WAYPOINT, 33.378, 110.181);

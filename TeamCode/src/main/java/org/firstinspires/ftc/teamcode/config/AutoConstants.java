@@ -39,8 +39,13 @@ public final class AutoConstants {
     public static final double RIGHT_1_CM = 60.0;
     /** Long move back (field +y) up the west lane. 240 ended ~10 cm too far. TESTED. */
     public static final double LONG_BACK_CM = 230.0;
-    /** Last move right into the LOADING ZONE. 40 and 50 fell short. TESTED. */
-    public static final double RIGHT_2_CM = 60.0;
+    /**
+     * Last move right into the LOADING ZONE. 40 and 50 fell short; 60 was TESTED but ended the
+     * robot ~0.8 in from the red wall, so LEAVE was at risk. Team decision (rules agent,
+     * 2026-11-25): 56.5 ends the robot side ~2.1 in off the wall (FieldConstants
+     * WALL_CLEARANCE_INCHES) and still partly in the zone. TODO: TUNE (re-test on the robot)
+     */
+    public static final double RIGHT_2_CM = 56.5;
 
     // ---------------- Near collect / other cell legs (FITTED from logged runs 2026-11-24) ----------------
 
@@ -149,19 +154,21 @@ public final class AutoConstants {
     public static double EMERGENCY_PARK_LANE_TOLERANCE_INCHES = 2.0;
 
     /**
-     * "Loading zone" start (Safe Park): robot inside the red LOADING ZONE, front (intake)
-     * against the red wall (heading 180), centered on the zone. TODO: TUNE (measure on the field)
+     * "Beside the loading zone" start (Safe Park): front (intake) against the red wall (heading
+     * 180), the whole robot just behind the LOADING ZONE tape (y > 119.5), because G304.E forbids
+     * starting in the LOADING ZONE (manual TU10). Was y 108 (inside the zone: illegal).
+     * TODO: TUNE (measure on the field)
      */
     public static final double LOADING_ZONE_START_X = 9.0;
-    public static final double LOADING_ZONE_START_Y = 108.0;
+    public static final double LOADING_ZONE_START_Y = 129.5;
     public static final double LOADING_ZONE_START_HEADING_DEG = 180.0;
-    /** LEAVE from the loading-zone start: back off the wall, front stays in the zone. (ALP: 10 cm) */
+    /** LEAVE from the beside-the-zone start: back off the wall. (ALP: 10 cm) */
     public static final double LOADING_ZONE_LEAVE_CM = 10.0;
 
     /** Encoder-only LEAVE (Safe Park Encoders), from ALP LeaveParkAuto. */
     public static double ENCODER_LEAVE_CM = 10.0;
     /** Constant power of the encoder LEAVE, backwards (ALP: 0.30). */
     public static double ENCODER_LEAVE_POWER = 0.30;
-    /** Hard timeout: even a full-timeout move stays inside the LOADING ZONE (ALP: 0.6 s). */
+    /** Hard timeout of the encoder LEAVE, so a dead encoder cannot drive far (ALP: 0.6 s). */
     public static double ENCODER_LEAVE_TIMEOUT_SECONDS = 0.6;
 }

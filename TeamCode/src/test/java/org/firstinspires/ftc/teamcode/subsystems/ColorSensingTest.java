@@ -28,7 +28,7 @@ public class ColorSensingTest {
     }
 
     @Test
-    public void rejectsOpponentNectar() {
+    public void stopsIntakeForOpponentNectar() {
         FakeClock clock = new FakeClock();
         ColorSensing sensing = new ColorSensing(null, clock);
         sensing.updateFromBalls(frame(BallColor.BLUE_NECTAR, NEAR));
@@ -38,16 +38,39 @@ public class ColorSensingTest {
 
         final ColorSensing seen = sensing;
         Intake intake = new Intake(null, clock);
-        intake.setRejectDetector(() -> seen.isOpponentNectarAtIntake(Alliance.RED));
+        intake.setOpponentNectarDetector(() -> seen.isOpponentNectarAtIntake(Alliance.RED));
         intake.collect();
         intake.periodic();
-        assertEquals(Intake.State.REJECTING, intake.getState());
+        // G408 team decision: stop, never push the opponent's NECTAR out.
+        assertEquals(Intake.State.OPPONENT_NECTAR, intake.getState());
+        assertTrue(intake.isStoppedForOpponentNectar());
+        assertEquals(0.0, intake.getPower(), 1e-9);
+        clock.advance(1.0);
+        intake.periodic();
+        assertEquals("Still there: still stopped", Intake.State.OPPONENT_NECTAR, intake.getState());
+        assertEquals(0.0, intake.getPower(), 1e-9);
 
         sensing.updateFromBalls(Collections.<ColorSensing.Ball>emptyList());
-        clock.advance(IntakeConstants.REJECT_EJECT_SECONDS + 0.01);
+        intake.periodic();
+        assertEquals("Short hold after it leaves the view", Intake.State.OPPONENT_NECTAR, intake.getState());
+        assertTrue("Never runs outward", intake.getPower() >= 0.0);
+        clock.advance(IntakeConstants.OPPONENT_NECTAR_HOLD_SECONDS + 0.01);
+        intake.periodic();
+        assertEquals("Gone: collects again", Intake.State.COLLECTING, intake.getState());
+        assertEquals(1, intake.getOpponentNectarStopCount());
+    }
+
+    @Test
+    public void ownNectarDoesNotStopTheIntake() {
+        FakeClock clock = new FakeClock();
+        final ColorSensing sensing = new ColorSensing(null, clock);
+        sensing.updateFromBalls(frame(BallColor.RED_NECTAR, NEAR));
+        Intake intake = new Intake(null, clock);
+        intake.setOpponentNectarDetector(() -> sensing.isOpponentNectarAtIntake(Alliance.RED));
+        intake.collect();
         intake.periodic();
         assertEquals(Intake.State.COLLECTING, intake.getState());
-        assertEquals(1, intake.getRejectCount());
+        assertEquals(0, intake.getOpponentNectarStopCount());
     }
 
     @Test

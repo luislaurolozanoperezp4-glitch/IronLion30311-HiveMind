@@ -13,6 +13,7 @@ import org.firstinspires.ftc.teamcode.config.FieldConstants;
 import org.firstinspires.ftc.teamcode.config.RobotConstants;
 import org.firstinspires.ftc.teamcode.pathing.AutoPlanner;
 import org.firstinspires.ftc.teamcode.pathing.paths.NearRoutePoses;
+import org.firstinspires.ftc.teamcode.pathing.paths.SafeParkPaths;
 import org.firstinspires.ftc.teamcode.testutil.FakeClock;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.MatchTimer;
@@ -188,13 +189,31 @@ public class AutoSafetyTest {
     // ---------------- Safe Park and planner gate ----------------
 
     @Test
-    public void loadingZoneLeaveStaysInTheZoneAndOffTheWall() {
-        Pose leave = AutoSafePark.loadingZoneLeavePose();
-        double halfLength = RobotConstants.ROBOT_LENGTH_INCHES / 2.0;
-        double frontX = leave.x() - halfLength;
-        assertTrue("Front off the wall (LEAVE)", frontX >= FieldConstants.WALL_CLEARANCE_INCHES);
-        assertTrue("Front still in the zone (PARK)", frontX < FieldConstants.RED_LOADING_ZONE_MAX_X);
-        assertTrue(leave.y() > FieldConstants.RED_LOADING_ZONE_MIN_Y && leave.y() < FieldConstants.RED_LOADING_ZONE_MAX_Y);
+    public void competitionParkEndsLeaveAndPark() {
+        // Team decision: every competition park ends >= WALL_CLEARANCE_INCHES off the wall, partly in the zone.
+        StartPositionRulesTest.assertParkWithLeave("NearRoutePoses.PARK", NearRoutePoses.PARK);
+        StartPositionRulesTest.assertParkWithLeave("NearRoutePoses.OTHER_PARK", NearRoutePoses.OTHER_PARK);
+        StartPositionRulesTest.assertParkWithLeave("SafeParkPaths.PARK", SafeParkPaths.PARK);
+        StartPositionRulesTest.assertParkWithLeave("FieldConstants.RED_PARK", FieldConstants.RED_PARK);
+        StartPositionRulesTest.assertParkWithLeave("AutoSafePark beside-zone park", AutoSafePark.loadingZoneParkPose());
+        for (Pose red : ROUTE_POSES) {
+            List<Pose> plan = EmergencyPark.plan(red, Alliance.RED);
+            StartPositionRulesTest.assertParkWithLeave("EmergencyPark from " + red, plan.get(plan.size() - 1));
+        }
+    }
+
+    // ---------------- G402 guard with a turned robot ----------------
+
+    @Test
+    public void territoryGuardCountsTheCornersOfATurnedRobot() {
+        double squareLimit = FieldConstants.TERRITORY_LINE_X - RobotConstants.ROBOT_WIDTH_INCHES / 2.0;
+        // 1 in inside the square limit: fine square to the field, past the line at 45 degrees.
+        Pose square = new Pose(squareLimit - 1.0, 30.0, Math.toRadians(90.0));
+        Pose turned = new Pose(squareLimit - 1.0, 30.0, Math.toRadians(45.0));
+        assertFalse(TerritoryGuard.isPastLine(square, Alliance.RED));
+        assertTrue("A 45-degree corner reaches 12.7 in", TerritoryGuard.isPastLine(turned, Alliance.RED));
+        assertTrue(TerritoryGuard.isPastLine(Alliance.rotate180(turned), Alliance.BLUE));
+        assertEquals(ROBOT_RADIUS, TerritoryGuard.getHalfReachX(Math.toRadians(45.0)), 1e-9);
     }
 
     @Test

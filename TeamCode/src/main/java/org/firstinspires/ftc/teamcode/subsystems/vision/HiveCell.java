@@ -14,14 +14,17 @@ import org.firstinspires.ftc.teamcode.util.Alliance;
  * alliance owns two cells, and exactly one of them faces up (can be scored) at any time; every
  * TIP swaps which one.
  * <p>
- * Names are the ones used on the tested robot. Which physical cell each tag range is on, and
- * which one starts UP, is decision D20 (team must confirm).
+ * Names follow the Competition Manual (TU10, section 9.9, Figure 9-17), confirmed by the team
+ * (decision D20): BACK = the CELL on the side of the FIELD opposite the audience (+y in the
+ * Pedro frame), AUDIENCE = the CELL on the audience side. Red 30-33 back, red 34-37 audience,
+ * blue 38-41 audience, blue 42-45 back. Renamed from the tested robot's RED_SCORING /
+ * BLUE_SCORING; the behavior is unchanged.
  */
 public enum HiveCell {
-    RED_SCORING(Alliance.RED, "Red Scoring (30-33)", 30, 31, 32, 33),
+    RED_BACK(Alliance.RED, "Red Back (30-33)", 30, 31, 32, 33),
     RED_AUDIENCE(Alliance.RED, "Red Audience (34-37)", 34, 35, 36, 37),
     BLUE_AUDIENCE(Alliance.BLUE, "Blue Audience (38-41)", 38, 39, 40, 41),
-    BLUE_SCORING(Alliance.BLUE, "Blue Scoring (42-45)", 42, 43, 44, 45);
+    BLUE_BACK(Alliance.BLUE, "Blue Back (42-45)", 42, 43, 44, 45);
 
     /** Lowest AprilTag ID used by any HIVE cell. */
     public static final int MIN_TAG_ID = VisionConstants.FIRST_HIVE_TAG_ID;
@@ -41,10 +44,10 @@ public enum HiveCell {
 
     /**
      * @param alliance our alliance
-     * @return the alliance's cell on the scoring side (shot first from the near spot)
+     * @return the alliance's CELL opposite the audience (the tested routine shoots it first)
      */
-    public static HiveCell getScoringCell(Alliance alliance) {
-        return alliance == Alliance.RED ? RED_SCORING : BLUE_SCORING;
+    public static HiveCell getBackCell(Alliance alliance) {
+        return alliance == Alliance.RED ? RED_BACK : BLUE_BACK;
     }
 
     /**

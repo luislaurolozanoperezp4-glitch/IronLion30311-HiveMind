@@ -67,7 +67,7 @@ public class HiveStateTracker {
      * @param alliance the alliance whose two HIVE cells are tracked
      */
     public HiveStateTracker(Alliance alliance) {
-        this.firstCell = HiveCell.getScoringCell(alliance);
+        this.firstCell = HiveCell.getBackCell(alliance);
         this.secondCell = HiveCell.getAudienceCell(alliance);
     }
 

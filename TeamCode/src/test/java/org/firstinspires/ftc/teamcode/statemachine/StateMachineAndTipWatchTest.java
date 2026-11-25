@@ -50,7 +50,7 @@ public class StateMachineAndTipWatchTest {
         FakeView view = new FakeView();
         view.hasSeen = true;
         TipWatch watch = new TipWatch(view, clock);
-        watch.start(HiveCell.RED_SCORING, 4.0, 0.8);
+        watch.start(HiveCell.RED_BACK, 4.0, 0.8);
         // Time without tags before the watch does not count
         watch.periodic();
         assertFalse(watch.isDone());
@@ -65,7 +65,7 @@ public class StateMachineAndTipWatchTest {
         view.hasSeen = true;
         view.isInView = true;
         TipWatch watch = new TipWatch(view, clock);
-        watch.start(HiveCell.RED_SCORING, 1.0, 0.8);
+        watch.start(HiveCell.RED_BACK, 1.0, 0.8);
         for (int i = 0; i < 60; i++) {
             watch.periodic();
             clock.advance(0.02);
@@ -76,7 +76,7 @@ public class StateMachineAndTipWatchTest {
     @Test
     public void neverSeenIsUnknown() {
         TipWatch watch = new TipWatch(new FakeView(), clock);
-        watch.start(HiveCell.RED_SCORING, 1.0, 0.8);
+        watch.start(HiveCell.RED_BACK, 1.0, 0.8);
         clock.advance(1.1);
         watch.periodic();
         assertTrue(watch.isUnknown());

@@ -8,6 +8,7 @@ import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 import org.firstinspires.ftc.teamcode.config.AutoConstants;
+import org.firstinspires.ftc.teamcode.config.FieldConstants;
 import org.firstinspires.ftc.teamcode.pathing.paths.NearRoutePoses;
 import org.firstinspires.ftc.teamcode.pathing.paths.PreloadParkPaths;
 import org.firstinspires.ftc.teamcode.pathing.paths.SafeParkPaths;
@@ -26,8 +27,9 @@ import java.util.List;
  *     <li>NEAR: LEAVE 10 cm, then the TESTED park legs through the west lane.</li>
  *     <li>FAR: backwards down the side wall into the LOADING ZONE (beta {@code ParkAuto},
  *     ends ~0.6 in from the wall: LEAVE may not count, see the hand-off).</li>
- *     <li>LOADING ZONE: start inside the zone, front against the side wall; back off 10 cm
- *     (LEAVE) and stay (PARK).</li>
+ *     <li>LOADING ZONE: start just behind the zone tape (G304.E forbids starting inside it),
+ *     front against the side wall; back off 10 cm (LEAVE), then slide along the wall into the
+ *     zone (PARK), staying off the wall.</li>
  * </ul>
  * No {@code preselectTeleOp}: the alliance is chosen in INIT, so pick the TeleOp by hand.
  */
@@ -48,7 +50,7 @@ public class AutoSafePark extends AutoBase {
             case FAR:
                 return "SAFE PARK from FAR: down the side wall into the LOADING ZONE";
             case LOADING_ZONE:
-                return "SAFE PARK from the LOADING ZONE: back off 10 cm and stay";
+                return "SAFE PARK from beside the LOADING ZONE: back off 10 cm, slide into the zone";
             default:
                 return "SAFE PARK from NEAR: LEAVE 10 cm + TESTED park legs (no shooting)";
         }
@@ -61,7 +63,8 @@ public class AutoSafePark extends AutoBase {
                 sequence.addAll(parkSteps("Down the wall", Arrays.asList(field(SafeParkPaths.PARK)), false));
                 break;
             case LOADING_ZONE:
-                sequence.addAll(parkSteps("LEAVE", Arrays.asList(field(loadingZoneLeavePose())), false));
+                sequence.addAll(parkSteps("LEAVE + PARK", Arrays.asList(field(loadingZoneLeavePose()),
+                        field(loadingZoneParkPose())), true));
                 break;
             default:
                 List<AutoStep> steps = new ArrayList<>();
@@ -74,11 +77,18 @@ public class AutoSafePark extends AutoBase {
         }
     }
 
-    /** @return the RED loading-zone start moved {@code LOADING_ZONE_LEAVE_CM} backwards */
+    /** @return the RED beside-the-zone start moved {@code LOADING_ZONE_LEAVE_CM} backwards */
     static Pose loadingZoneLeavePose() {
         Pose start = StartPosition.LOADING_ZONE.getRedPose();
         double backInches = AutoConstants.LOADING_ZONE_LEAVE_CM / CM_PER_INCH;
         return new Pose(start.x() - Math.cos(start.heading()) * backInches,
                 start.y() - Math.sin(start.heading()) * backInches, start.heading());
+    }
+
+    /** @return the LEAVE pose slid along the wall to the middle of the RED LOADING ZONE (PARK) */
+    static Pose loadingZoneParkPose() {
+        Pose leave = loadingZoneLeavePose();
+        return new Pose(leave.x(), (FieldConstants.RED_LOADING_ZONE_MIN_Y
+                + FieldConstants.RED_LOADING_ZONE_MAX_Y) / 2.0, leave.heading());
     }
 }

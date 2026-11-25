@@ -43,7 +43,7 @@ public class HiveStateTrackerTest {
     @Test
     public void confirmsUpwardCellAfterConsistentObservations() {
         feed(true, false, CONFIRM_FEED_MS);
-        assertEquals(HiveCell.RED_SCORING, tracker.getUpwardCell());
+        assertEquals(HiveCell.RED_BACK, tracker.getUpwardCell());
         assertEquals(HiveStateTracker.State.UPWARD_KNOWN, tracker.getState(nowMs));
         assertEquals(0, tracker.getTipCount());
     }
@@ -65,7 +65,7 @@ public class HiveStateTrackerTest {
     public void singleVerdictIsEnough() {
         // Only the audience cell is visible and it is upside down: the scoring cell is up.
         feed(null, false, CONFIRM_FEED_MS);
-        assertEquals(HiveCell.RED_SCORING, tracker.getUpwardCell());
+        assertEquals(HiveCell.RED_BACK, tracker.getUpwardCell());
     }
 
     @Test
@@ -82,7 +82,7 @@ public class HiveStateTrackerTest {
         tracker.update(false, true, nowMs);
         nowMs += FRAME_MS;
         feed(true, false, CONFIRM_FEED_MS);
-        assertEquals(HiveCell.RED_SCORING, tracker.getUpwardCell());
+        assertEquals(HiveCell.RED_BACK, tracker.getUpwardCell());
         assertEquals(0, tracker.getTipCount());
     }
 
@@ -101,7 +101,7 @@ public class HiveStateTrackerTest {
         feed(true, false, CONFIRM_FEED_MS);
         long afterMs = nowMs + HiveStateTracker.STALE_AFTER_MS + 1;
         assertEquals(HiveStateTracker.State.UPWARD_STALE, tracker.getState(afterMs));
-        assertEquals(HiveCell.RED_SCORING, tracker.getUpwardCell());
+        assertEquals(HiveCell.RED_BACK, tracker.getUpwardCell());
     }
 
     @Test
@@ -122,7 +122,7 @@ public class HiveStateTrackerTest {
         }
         assertEquals(HiveCell.BLUE_AUDIENCE, blue.getUpwardCell());
         assertEquals(Alliance.BLUE, HiveCell.BLUE_AUDIENCE.getAlliance());
-        assertEquals(Alliance.RED, HiveCell.RED_SCORING.getAlliance());
+        assertEquals(Alliance.RED, HiveCell.RED_BACK.getAlliance());
     }
 
     @Test
@@ -132,7 +132,7 @@ public class HiveStateTrackerTest {
         tracker.update(true, null, nowMs + 100);
         tracker.update(null, null, nowMs + 120);
         tracker.update(true, null, nowMs + 160);
-        assertEquals(HiveCell.RED_SCORING, tracker.getUpwardCell());
+        assertEquals(HiveCell.RED_BACK, tracker.getUpwardCell());
     }
 
     @Test
@@ -184,7 +184,7 @@ public class HiveStateTrackerTest {
 
     @Test
     public void selectTargetUsesOnlyASingleUprightCellWhenUnconfirmed() {
-        assertEquals(HiveCell.RED_SCORING, tracker.selectTarget(true, null, nowMs));
+        assertEquals(HiveCell.RED_BACK, tracker.selectTarget(true, null, nowMs));
         assertEquals(HiveCell.RED_AUDIENCE, tracker.selectTarget(false, true, nowMs));
         assertNull(tracker.selectTarget(true, true, nowMs));
         assertNull(tracker.selectTarget(false, false, nowMs));
@@ -195,8 +195,8 @@ public class HiveStateTrackerTest {
     @Test
     public void selectTargetNeverAimsAtACellSeenUpsideDown() {
         feed(true, false, CONFIRM_FEED_MS);
-        assertEquals(HiveCell.RED_SCORING, tracker.selectTarget(null, null, nowMs));
-        assertEquals(HiveCell.RED_SCORING, tracker.selectTarget(true, false, nowMs));
+        assertEquals(HiveCell.RED_BACK, tracker.selectTarget(null, null, nowMs));
+        assertEquals(HiveCell.RED_BACK, tracker.selectTarget(true, false, nowMs));
         assertNull(tracker.selectTarget(false, true, nowMs));
     }
 }

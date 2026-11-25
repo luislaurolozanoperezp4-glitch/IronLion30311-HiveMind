@@ -31,7 +31,7 @@ public class FlowerArmTest {
         assertFalse(arm.deployIfAllowed(timer));
         assertEquals(2, arm.getRefusedCount());
 
-        clock.advance(61.0); // 59 s left
+        clock.advance(62.0); // 58 s left (G410 unlock at 60 s minus the START-press margin)
         assertTrue(arm.deploy());
         assertTrue(arm.isDeployed());
         arm.retract();

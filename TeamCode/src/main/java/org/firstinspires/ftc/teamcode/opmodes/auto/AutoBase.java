@@ -65,8 +65,9 @@ import java.util.function.DoubleSupplier;
  *     <li>G402: if the pose crosses into the opponent's territory ({@link TerritoryGuard}), the
  *     drive stops for the rest of AUTO.</li>
  *     <li>G407: the intake refuses to collect while the robot controls 4 elements
- *     ({@code ElementCounter}, starts at the preload). G408: opponent NECTAR at the intake is
- *     pushed away.</li>
+ *     ({@code ElementCounter}, starts at the preload). G408: the intake stops (never pushes)
+ *     while the opponent's NECTAR is at the intake. At STOP the element count is handed to
+ *     TeleOp ({@link PoseStorage#saveElementCount(int)}).</li>
  * </ul>
  * <b>STOP</b>: everything stops and the final pose is saved for TeleOp ({@link PoseStorage}),
  * unless the odometry was lost (then nothing is saved).
@@ -174,14 +175,14 @@ public abstract class AutoBase extends OpMode {
         subsystems.addAll(Arrays.<Subsystem>asList(battery, colorSensing, launcher, elementCounter,
                 intake, indexer, vision, lights));
 
-        // G407: no collecting while the robot controls the limit. G408: push opponent NECTAR away.
+        // G407: no collecting while the robot controls the limit. G408: stop (never push) for opponent NECTAR.
         intake.setCollectGate(new BooleanSupplier() {
             @Override
             public boolean getAsBoolean() {
                 return elementCounter.canCollectMore();
             }
         });
-        intake.setRejectDetector(new BooleanSupplier() {
+        intake.setOpponentNectarDetector(new BooleanSupplier() {
             @Override
             public boolean getAsBoolean() {
                 return colorSensing.isOpponentNectarAtIntake(selector.getAlliance());
@@ -315,6 +316,10 @@ public abstract class AutoBase extends OpMode {
             if (driver != null && !driver.isOdometryLost() && matchTimer.isStarted()) {
                 PoseStorage.save(follower.pose(), selector.getAlliance());
             }
+        }
+        if (matchTimer.isStarted()) {
+            // G407 hand-off: TeleOp starts from what the robot still holds.
+            PoseStorage.saveElementCount(elementCounter.getCount());
         }
         for (Subsystem subsystem : subsystems) {
             subsystem.stop();
