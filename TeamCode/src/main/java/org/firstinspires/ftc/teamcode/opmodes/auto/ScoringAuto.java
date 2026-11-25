@@ -33,7 +33,8 @@ import java.util.function.DoubleSupplier;
  *     <li>LEAVE 10 cm, shoot the 4 preloaded POLLEN at 2950 RPM (ends by 22 s).</li>
  *     <li>Decision ({@link AutoPlanner}): CYCLE_AGAIN if a collect cycle plus the park after it
  *     still fit (with the 4 s park reserve) and the volley ended before 11 s (TESTED backstop);
- *     otherwise GO_PARK with the TESTED park legs (back 5, right 60, back 230, right 60 cm).</li>
+ *     otherwise GO_PARK with the TESTED park legs (back 5, right 60, back 230, right 56.5 cm;
+ *     the last leg was 60 cm in the tested run, shortened for the 2 in LEAVE gap).</li>
  *     <li>Cycle: early TIP watch on our scoring cell (up to 4 s, shorter if time is short), turn
  *     90 deg, collect the ball row slowly, then
  *     <ul>
