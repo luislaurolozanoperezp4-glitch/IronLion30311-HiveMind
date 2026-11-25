@@ -26,4 +26,15 @@ android {
 
 dependencies {
     implementation project(':FtcRobotController')
+
+    // JUnit tests for hardware-free logic. They run on the computer (./gradlew test),
+    // not on the robot, and are not packaged into the APK.
+    testImplementation 'junit:junit:4.13.2'
+}
+
+android {
+    testOptions {
+        // Android framework calls inside tested classes return default values instead of failing.
+        unitTests.returnDefaultValues = true
+    }
 }

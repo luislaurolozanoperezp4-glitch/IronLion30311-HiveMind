@@ -1,0 +1,43 @@
+# Builds the robot app and runs the JUnit tests on every push and pull request to main and dev.
+name: Build
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build APK and run unit tests
+        run: ./gradlew --no-daemon assembleDebug testDebugUnitTest
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: TeamCode/build/reports/tests/
+
+  branch-name:
+    # Rejects pull requests whose branch name breaks docs/BRANCHING.md.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch name
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          regex='^(main|dev|(feat|fix|auto|path|tune|refactor|test|docs|ci|chore|hotfix|agent)/[a-z0-9]+(-[a-z0-9]+)*)$'
+          if [[ ! "$BRANCH" =~ $regex ]] || [ ${#BRANCH} -gt 30 ]; then
+            echo "Branch '$BRANCH' does not follow docs/BRANCHING.md (type/short-kebab-name, max 30 chars)."
+            exit 1
+          fi
+          echo "Branch name OK: $BRANCH"
