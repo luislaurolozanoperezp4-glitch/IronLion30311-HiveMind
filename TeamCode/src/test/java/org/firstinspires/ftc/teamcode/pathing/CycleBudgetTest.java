@@ -65,9 +65,9 @@ public class CycleBudgetTest {
     @Test
     public void abortsAStepWhenTheParkNoLongerFits() {
         setRemaining(10.0);
-        assertFalse(planner.mustParkNow(6.0));
+        assertFalse(planner.shouldParkNow(6.0));
         clock.now += 0.5; // 9.5 s left: 9.5 - 4 < 6
-        assertTrue(planner.mustParkNow(6.0));
+        assertTrue(planner.shouldParkNow(6.0));
     }
 
     @Test

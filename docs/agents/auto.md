@@ -38,7 +38,7 @@ placeholders, every line `TODO: TUNE`), `MAX_PATH_SPEED 0.6` (cap until AutoTune
 
 **AutoPlanner** (`new AutoPlanner(autoTimer)`): `decideNextStep(cycleSec, parkAfterCycleSec,
 cyclesDone, hasBallsAvailable)` → `CYCLE_AGAIN` only if `timer.hasTimeFor(cycle + park)` (keeps
-the 4 s park reserve) and `cyclesDone < MAX_CYCLES`; `mustParkNow(parkSec)`;
+the 4 s park reserve) and `cyclesDone < MAX_CYCLES`; `shouldParkNow(parkSec)`;
 `isBeforeDeadline(latestMatchSec)` (VA 11 / 15 s backstops); `getShootTimeLeft(max, latestEnd)`;
 estimates `estimateLegSeconds`, `estimateLegsSeconds(List<Pose>)`, `estimatePathsSeconds(List<Path>)`,
 `estimateTurnSeconds`, `estimateShootSeconds(balls)`. Cruise 25 in/s + 0.2 s/leg is FITTED to the

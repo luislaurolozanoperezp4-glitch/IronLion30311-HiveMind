@@ -174,10 +174,18 @@ public class PathsTest {
     }
 
     @Test
-    public void nearPosesMatchTheTestedRoute() {
-        // docs/AUDIT_PEDRO.md section 7.3 (converted from the tested cm legs)
+    public void keepsTestedPreloadParkLegs() {
+        // docs/AUDIT_PEDRO.md section 7.3 (converted from the TESTED cm legs, long back 230 cm)
         assertPose(NearRoutePoses.SHOOT_SPOT, 57.000, 12.937);
         assertPose(NearRoutePoses.WEST_LANE_SOUTH, 33.378, 14.906);
+        assertPose(NearRoutePoses.PRELOAD_LANE_NORTH, 33.378, 105.457);
+        // Last leg 56.5 instead of the TESTED 60 cm: 2 in off the wall (team decision)
+        assertPose(NearRoutePoses.PRELOAD_PARK, 11.134, 105.457);
+    }
+
+    @Test
+    public void placesCycleAndOtherCellPosesAsDesigned() {
+        // Low park after a collect cycle (vision-align 1e723f2), not robot-tested in this form
         assertPose(NearRoutePoses.WEST_LANE_NORTH, 33.378, 95.417);
         // PARK moved from the TESTED x 9.756 to 2 in off the wall (team decision, RIGHT_2_CM 60 -> 56.5)
         assertPose(NearRoutePoses.PARK, 11.134, 95.417);

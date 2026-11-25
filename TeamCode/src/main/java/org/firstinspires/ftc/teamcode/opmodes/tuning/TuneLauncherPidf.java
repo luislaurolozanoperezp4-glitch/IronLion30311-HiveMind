@@ -247,6 +247,7 @@ public class TuneLauncherPidf extends OpMode {
         telemetry.addData("Graph/ErrorRpm", selectedTarget() - selectedRpm());
         telemetry.addLine("A pollen | B nectar | X select | D-pad target | Y gain | RB/LB +/- | RT feed");
         telemetry.addLine("Copy good gains into LauncherConstants.java");
+        telemetry.addLine("Changed values stay in use until the app restarts (competition OpModes too): copy them into config/");
     }
 
     /** Stops the flywheels and the indexer, closes the log. */

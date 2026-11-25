@@ -19,7 +19,9 @@ import org.firstinspires.ftc.teamcode.config.FieldConstants;
  * SHOOT_SPOT              (57.000, 12.937,  -90)   LEAVE 10 cm, shoot here (TESTED)
  * BACK_OFF_2              (57.000, 14.906,  -90)
  * WEST_LANE_SOUTH (right1)(33.378, 14.906,  -90)
- * WEST_LANE_NORTH (long)  (33.378, 95.417,  -90)   TESTED at y 105.457 (long back 230)
+ * WEST_LANE_NORTH (long)  (33.378, 95.417,  -90)   after a collect cycle (1e723f2 low park)
+ * PRELOAD_LANE_NORTH      (33.378,105.457,  -90)   TESTED (long back 230), preload + park only
+ * PRELOAD_PARK            (11.134,105.457,  -90)   TESTED leg, 2.1 in off the wall
  * PARK (right2)           (11.134, 95.417,  -90)   zone's low edge, 2.1 in off the wall
  * COLLECT_START           (29.047,  9.394,  180)   along the audience wall (4fd2293)
  * COLLECT_END             ( 9.756,  9.394,  180)
@@ -47,6 +49,7 @@ public final class NearRoutePoses {
     private static final double BACK_AFTER_LEAVE = AutoConstants.LEAVE_BACK_CM;
     private static final double BACK_AFTER_SECOND = BACK_AFTER_LEAVE + AutoConstants.SECOND_BACK_CM;
     private static final double BACK_AFTER_LONG = BACK_AFTER_SECOND + AutoConstants.LONG_BACK_CM;
+    private static final double BACK_AFTER_PRELOAD_LONG = BACK_AFTER_SECOND + AutoConstants.PRELOAD_LONG_BACK_CM;
 
     /** Near start. TESTED. */
     public static final Pose START = FieldConstants.NEAR_START;
@@ -65,9 +68,21 @@ public final class NearRoutePoses {
     /** South end of the west lane (the original "right1"). TESTED. */
     public static final Pose WEST_LANE_SOUTH = relative(BACK_AFTER_SECOND, AutoConstants.RIGHT_1_CM,
             START_HEADING_DEG);
-    /** North end of the west lane (the original "longBack"). TESTED. */
+    /** North end of the west lane before the low PARK used after a collect cycle (1e723f2). */
     public static final Pose WEST_LANE_NORTH = relative(BACK_AFTER_LONG, AutoConstants.RIGHT_1_CM,
             START_HEADING_DEG);
+    /**
+     * North end of the west lane on the TESTED preload + park route (the original "longBack",
+     * back 230 cm). TESTED in the 4/4 run.
+     */
+    public static final Pose PRELOAD_LANE_NORTH = relative(BACK_AFTER_PRELOAD_LONG, AutoConstants.RIGHT_1_CM,
+            START_HEADING_DEG);
+    /**
+     * PARK of the TESTED preload + park route: same depth as the 4/4 run, last leg 56.5 cm so the
+     * robot side ends ~2.1 in off the red wall (LEAVE, team decision).
+     */
+    public static final Pose PRELOAD_PARK = relative(BACK_AFTER_PRELOAD_LONG,
+            AutoConstants.RIGHT_1_CM + AutoConstants.RIGHT_2_CM, START_HEADING_DEG);
     /** PARK in the red LOADING ZONE (the original "right2"), 2 in off the wall for LEAVE. */
     public static final Pose PARK = relative(BACK_AFTER_LONG,
             AutoConstants.RIGHT_1_CM + AutoConstants.RIGHT_2_CM, START_HEADING_DEG);

@@ -142,7 +142,7 @@ Paths are relative to `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/` u
 | `readme.md` | `4d1da4` | SDK readme | 1 | – | – | SDK boilerplate | DISCARD | – |
 | `TeamCode/src/test/.../Hive{Geometry,Orientation,StateTracker}Test.java` | `74b497`,`43fb52`,`dc7b8b` | JUnit tests | 4 | yes (junit) | junit 4.13.2 | – | KEEP | same |
 | `TeamCode/src/main/assets/images/biobuzz.webp` | – | Dashboard field image | – | – | – | – | KEEP | – |
-| `CONVENTIONS.md`, `doc/naming/rename-map.md` | – | Naming rules + old→new map | 5 | – | – | rename map predates vision-align additions | KEEP (update) | `docs/CONVENTIONS.md` |
+| `CONVENTIONS.md`, `doc/naming/rename-map.md` | – | Naming rules + old→new map | 5 | – | – | rename map predates vision-align additions | KEEP (update) | superseded by `docs/NAMING.md` |
 | `PROJECT_CONTEXT.md` | – | AI-session context | 2 | – | – | stale ("no Pedro", "Indexer runs forward only", local Windows paths) | REPLACE | – |
 | `scripts/{pull-robot-logs,pull-latest-logs,clear-robot-logs}.sh`, `scripts/{routes,odometry_routes}_to_visualizer.py` | – | adb log pull, route export | 4 | – | adb, python | – | KEEP | `tools/` |
 | `TeamCode/src/main/res/xml/teamwebcamcalibrations.xml`, `res/values/strings.xml`, `res/raw/readme.md` | – | SDK defaults (identical on all 40 branches) | – | – | – | unchanged | KEEP (SDK) | – |
@@ -165,7 +165,7 @@ Paths are relative to `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/` u
 | `opmodes/base/PedroAutoBase.java`, `opmodes/auto/{Tick,CenterLane,OuterLane,Park,ShootTurnCollect}Auto.java` | – | Pedro routes | – | yes | Pedro agent | → Pedro agent | `AutoRed…`/`AutoBlue…` |
 | `opmodes/calibration/OdometryCalibrationAuto.java` | `854c72` | Interactive pod/gyro calibrator | 3 | yes | depends on AutoDrive | KEEP (if AutoDrive kept) | `TuneOdometryPods` |
 | `opmodes/teleop/MainTeleOp.java` | `4d35ec` | Older TeleOp; GP2 LB = align, GP1 RB collect | 3 | yes | intake button mapping inverted vs robot | REPLACE (by `ad3c7d`) | – |
-| `DRIVE_MODES_REFERENCE.md`, `docs/DRIVE_MODES_REFERENCE.md` | – | Duplicate copies of one doc | 3 | – | duplicated | MERGE (one copy) | `docs/DRIVE_MODES.md` |
+| `DRIVE_MODES_REFERENCE.md`, `docs/DRIVE_MODES_REFERENCE.md` | – | Duplicate copies of one doc | 3 | – | duplicated | MERGE (one copy) | superseded by README "Controls" |
 | `docs/autonomos-cancha.html` | – | Field diagram of autos | – | – | Spanish filename | → Pedro agent | `docs/auto-routes-field.html` |
 
 ### 2.3 `feature/mar/duopodriveNcam` @ `2d92fba` — unique / differing files

@@ -56,7 +56,7 @@ soon; NIT = cosmetic.
 | 7 | MINOR | FLOWER sweeper | `config/FlowerSweeperConstants.java:24-33` | UP and DOWN are both 0.50, so pressing B moves nothing. The code is complete, but the mechanism does nothing until it is calibrated (marked TODO: TUNE; the source has the same placeholders). | Same as `master:subsystems/FlowerSweeper.java:27-36`. | Calibrate with **Tune Flower Sweeper** and copy the values in. Until then, keep it on the robot-test list (README item 10 already says so). |
 | 8 | MINOR | DS names outside RobotConstants | `pathing/tuning/PinpointTuner.java:31` | `withDefault("pinpoint")` hard-codes a Driver Station name. This breaks the CLAUDE.md rule "Driver Station names live only in config/RobotConstants.java". | grep of all DS names outside `RobotConstants`: this is the only hit. | Use `RobotConstants.PINPOINT` (vendored file, so add a note in its header). |
 | 9 | MINOR | TeleOp field-centric for BLUE | `opmodes/teleop/TeleOpBase.java:172`; `subsystems/Drivetrain.java` (`headingOffsetRad` default 0) | If `ControlConstants.START_FIELD_CENTRIC` is set to true, field-centric starts with offset 0. "Forward" is then field +x, which points **toward** the BLUE drivers, so BLUE controls are inverted until BACK is pressed twice. The default is `false`, so this is latent. | `ControlConstants.java:40` `START_FIELD_CENTRIC = false`; no `resetFieldHeading()` / alliance offset at start. | Call `drivetrain.resetFieldHeading()` in `start()`, or set the offset from the alliance (0 for RED, π for BLUE) when the AUTO pose is used. |
-| 10 | NIT | Naming (NAMING §3) | `AutoSelector.java:50,69,77,85` (`onPress`, `setAlliance`, `moveStart`, `changeDelay`); `AutoPlanner.java:88` `mustParkNow`; `ColorSensing.java:285` `matches`; `ElementCounter.java:76` `recordCollected`; `FlowerSweeper.java:85,104` `down`, `toggle`; `Launcher.java:229` `updateReady`; `HiveAligner.java:94,120` `alignTo`, `evaluate`; `DataLogger.java:57` `open` | These methods return `boolean`, but their names do not start with is/has/can/should. Most are commands that report success. | grep of `boolean <name>(` | Either allow "command returns true on success" in NAMING §3, or rename (`tryToggle`, `shouldParkNow`, ...). |
+| 10 | NIT | Naming (NAMING §3) | `AutoSelector.java:50,69,77,85` (`onPress`, `setAlliance`, `moveStart`, `changeDelay`); `AutoPlanner.java:88` `shouldParkNow`; `ColorSensing.java:285` `matches`; `ElementCounter.java:76` `recordCollected`; `FlowerSweeper.java:85,104` `down`, `toggle`; `Launcher.java:229` `updateReady`; `HiveAligner.java:94,120` `alignTo`, `evaluate`; `DataLogger.java:57` `open` | These methods return `boolean`, but their names do not start with is/has/can/should. Most are commands that report success. | grep of `boolean <name>(` | Either allow "command returns true on success" in NAMING §3, or rename (`tryToggle`, `shouldParkNow`, ...). |
 | 11 | NIT | README accuracy | `README.md` Controls → Automatic, "1:00 left … FLOWER sweeper unlocked" | The gate opens at 0:59, because of `NECTAR_UNLOCK_MARGIN_SECONDS` = 1 s. | `util/MatchTimer.canPlaceNectar`, `MatchConstants.java` | Write "0:59 (1 s margin)". |
 | 12 | NIT | Test name | `test/.../pathing/PathsTest.java:177` | `nearPosesMatchTheTestedRoute` asserts poses that are no longer the tested ones (see #1). | — | Rename it, or assert the tested legs separately. |
 | 13 | NIT | README | `README.md` Team table | "City / country" and "Experience level" are still `TODO (team)`. | — | The team fills them in. |
@@ -196,3 +196,25 @@ tested preload park depth.
 - Every `.java` file has a `// Sources:` header. `CODE_GUIDE` covers every class. Every path
   has a straight-line copy.
 - `.gitignore`, LICENSE, README credits, Pedro / Visualizer licenses noted.
+
+## Resolution (Lead Architect, 2026-11-25, branch `fix/review-findings`)
+
+| # | Status | What was done |
+|---|---|---|
+| 1 | FIXED | The preload + park route uses the TESTED long leg again: `AutoConstants.PRELOAD_LONG_BACK_CM = 230`, new `NearRoutePoses.PRELOAD_LANE_NORTH` / `PRELOAD_PARK` (y 105.457) used by `PreloadParkPaths`. The low PARK (219.5 cm, 1e723f2) is kept only after a collect cycle / from the other cell. Last leg stays 56.5 cm (2.1 in off the wall, team decision). Test renamed to `keepsTestedPreloadParkLegs` + `placesCycleAndOtherCellPosesAsDesigned`. |
+| 2 | FIXED | `TerritoryGuard.limitTurnDegrees` and `limitMoveTarget` shorten every aim turn / aim move so the robot stays `AIM_TERRITORY_SAFETY_INCHES` (1 in) inside our territory, turn overshoot (`TURN_TOLERANCE_DEGREES`) included. Wired into `AutoBase.aimSteps`. New `TerritoryGuardTest` (overshoot + max rear move, both alliances). The G402 drive lock itself is unchanged (conservative). |
+| 3 | FIXED | TeleOp banner offers "eject" only for our own NECTAR; opponent NECTAR says "drive away, do not push it (G408)". |
+| 4 | FIXED | `AutoSafePark` Javadoc: FAR park ends at x 12.0 (2 in + 1 in margin). |
+| 5 | FIXED | Docs describe the one-line uncommitted `@Disabled` change inline ("diff kept local, not committed"). |
+| 6 | FIXED | Matrix/audit mark `CONVENTIONS.md` → superseded by `NAMING.md`, `DRIVE_MODES.md` → superseded by README "Controls". |
+| 7 | OPEN (robot) | Sweeper positions need **Tune Flower Sweeper** on the robot (README test list). |
+| 8 | FIXED | `PinpointTuner` default name = `RobotConstants.PINPOINT` (header notes the one change to the vendored file). |
+| 9 | FIXED | TeleOp `start()` calls `drivetrain.resetFieldHeading()` when field-centric starts on. |
+| 10 | FIXED | `mustParkNow` → `shouldParkNow`; NAMING §3 now allows commands that return `true` on success. |
+| 11 | FIXED | README: sweeper unlocks at 0:59 (1 s G410 margin). |
+| 12 | FIXED | See #1. |
+| 13 | OPEN (team) | City/country and experience level in the README team table. |
+| 14 | FIXED | Tuning OpModes show "Changed values stay in use until the app restarts ... copy them into config/". |
+| 15 | OPEN (UNSURE) | Emergency park target per routine — left for after robot testing. |
+
+Process note: the code-rules script was re-run normally by the Lead Architect: `Code rules: OK`. Build + 245/245 tests pass.

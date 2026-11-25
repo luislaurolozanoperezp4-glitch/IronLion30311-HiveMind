@@ -383,7 +383,7 @@ public abstract class AutoBase extends OpMode {
             return;
         }
         double parkSeconds = EmergencyPark.estimateSeconds(pose, getAlliance());
-        if (!planner.mustParkNow(parkSeconds)) {
+        if (!planner.shouldParkNow(parkSeconds)) {
             return;
         }
         String cancelled = sequence.getCurrentName();
@@ -993,7 +993,9 @@ public abstract class AutoBase extends OpMode {
                         if (pose == null) {
                             return;
                         }
-                        double turnDegrees = aimTurnDegrees(bearingDegrees(pose), targetBearingDegrees, maxTurnDegrees);
+                        double turnDegrees = TerritoryGuard.limitTurnDegrees(getPose(),
+                                aimTurnDegrees(bearingDegrees(pose), targetBearingDegrees, maxTurnDegrees),
+                                getAlliance());
                         if (Math.abs(turnDegrees) > AutoConstants.AIM_MIN_TURN_DEGREES) {
                             getSequence().addNext(
                                     turnTo(String.format(Locale.US, "Aim turn %.1f deg (bearing %.1f -> %.1f)",
@@ -1015,7 +1017,9 @@ public abstract class AutoBase extends OpMode {
                             getSequence().addNext(
                                     driveTo(String.format(Locale.US, "Aim distance %.0f cm (%.2f -> %.2f m)",
                                             moveCm, distanceMeters(pose), targetDistanceMeters),
-                                            movedTowardRear(getPose(), moveCm), Mode.SPIN_UP),
+                                            TerritoryGuard.limitMoveTarget(getPose(),
+                                                    movedTowardRear(getPose(), moveCm), getAlliance()),
+                                            Mode.SPIN_UP),
                                     settle(AutoConstants.SETTLE_SECONDS, Mode.SPIN_UP));
                         }
                     }

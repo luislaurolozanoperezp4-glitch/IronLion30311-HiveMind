@@ -54,6 +54,14 @@ public final class AutoConstants {
      */
     public static final double LONG_BACK_CM = PARK_BACK_CM - LEAVE_BACK_CM - SECOND_BACK_CM;
     /**
+     * Long move back up the west lane for the PRELOAD + PARK route only (no collect cycle).
+     * TESTED in the 4/4 run (2026-11-23) and still used by the team's current code
+     * ({@code master:PreloadRouteAuto LONG_BACK_CM = 230}): PARK ends at field y ~105.5, inside the
+     * LOADING ZONE. The lower {@link #PARK_BACK_CM} park (1e723f2) is used only after a collect
+     * cycle or from the other cell. Review finding #1.
+     */
+    public static final double PRELOAD_LONG_BACK_CM = 230.0;
+    /**
      * Last move right into the LOADING ZONE. 40 and 50 fell short; 60 was TESTED but ended the
      * robot ~0.8 in from the red wall, so LEAVE was at risk. Team decision (rules agent,
      * 2026-11-25): 56.5 ends the robot side ~2.1 in off the wall (FieldConstants
@@ -239,6 +247,11 @@ public final class AutoConstants {
      * route keeps the center at x 57 or less (edge 66 in), so the guard only trips on a fault.
      */
     public static double TERRITORY_GUARD_MARGIN_INCHES = 0.0;
+    /**
+     * Aim turns and aim moves are shortened so the robot stays at least this far inside our
+     * territory, turn overshoot included, and never trips the G402 guard (review finding #2).
+     */
+    public static double AIM_TERRITORY_SAFETY_INCHES = 1.0;
 
     /**
      * Emergency park (time ran out mid-step): a robot this close to the west lane (x 33.4) is

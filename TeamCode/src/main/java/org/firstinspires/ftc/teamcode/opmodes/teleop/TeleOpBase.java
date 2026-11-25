@@ -280,6 +280,11 @@ public abstract class TeleOpBase extends OpMode {
         elementCounter.setCount(TeleOpLogic.initialElementCount(
                 PoseStorage.getElementCount(-1)));
         PoseStorage.clear();
+        if (isFieldCentric) {
+            // Field-centric "forward" = the way the robot faces at START, so BLUE is never
+            // inverted (review finding #9). gamepad1 BACK twice re-zeroes it during the match.
+            drivetrain.resetFieldHeading();
+        }
         if (ControlConstants.MATCH_LOG_ENABLED) {
             matchLog.open(MATCH_LOG_FOLDER, getLogTag(), MATCH_LOG_HEADER);
         }
@@ -642,8 +647,11 @@ public abstract class TeleOpBase extends OpMode {
         if (intake.isStoppedForOpponentNectar()) {
             telemetry.addLine("!! OPPONENT NECTAR AT THE INTAKE - intake stopped (G408): drive away, do not push it");
         } else if (lights.getNectarAlertColor() != null) {
-            telemetry.addLine("!! NECTAR AT THE INTAKE: " + lights.getNectarAlertColor()
-                    + " (eject: gamepad1 RB)");
+            BallColor nectar = lights.getNectarAlertColor();
+            // G408: only our own NECTAR may be ejected; never push the opponent's (review finding #3)
+            telemetry.addLine(nectar.isOpponentNectar(alliance)
+                    ? "!! OPPONENT NECTAR AT THE INTAKE - drive away, do not push it (G408)"
+                    : "!! NECTAR AT THE INTAKE: " + nectar + " (eject: gamepad1 RB)");
         }
         if (hardware.hasWarnings()) {
             telemetry.addLine("!! " + hardware.getWarnings().size()

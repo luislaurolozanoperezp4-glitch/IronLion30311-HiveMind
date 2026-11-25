@@ -220,7 +220,7 @@ Checked against `opmodes/teleop/TeleOpBase.java`. Details and reasons: `docs/age
 | INIT | Light shows the alliance; missing devices, cameras, odometry and the AUTO pose hand-off are listed |
 | 1:05 left | Both gamepads: 3 short blips |
 | START | POLLEN idle spin starts (never in INIT) |
-| 1:00 left | Long rumble, `*** ENDGAME ***` banner, FLOWER sweeper unlocked, idle light blinks |
+| 1:00 left | Long rumble, `*** ENDGAME ***` banner, idle light blinks; FLOWER sweeper unlocks at 0:59 (1 s G410 safety margin) |
 | Battery low | Both gamepads rumble once, banner |
 | Indexer jam | gamepad2 rumbles until fire is released |
 | Intake jam | More than 6 A for 0.4 s while collecting: the intake reverses 0.4 s, then collects again |

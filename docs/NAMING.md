@@ -42,6 +42,7 @@ Every example below is a real name from this repository.
 |---|---|
 | `lowerCamelCase`, starts with a verb | `collect()`, `spinUpPollen()`, `driveTo(...)`, `adjustPollenRpm(delta)` |
 | A method that returns a `boolean` starts with `is`, `has`, `can` or `should` | `isPollenReady()`, `hasPinpoint()`, `canPlaceNectar()`, `isCellDown(...)` |
+| Exception: a **command** (a verb that changes something) may return `true` when it worked; say so in its Javadoc `@return` | `toggle()`, `open(...)`, `recordCollected()`, `alignTo(cell)` |
 | Getters start with `get` | `getPollenRpm()`, `getRemainingSeconds()`, `getUpwardCell()` |
 | Every subsystem has the same three lifecycle methods (from the `Subsystem` interface) | `periodic()` (once per loop), `stop()`, `addTelemetry(Telemetry t)` |
 | Non-blocking sequences use the same shape | `start(...)`, `periodic()`, `isDone()`, `cancel()` |
