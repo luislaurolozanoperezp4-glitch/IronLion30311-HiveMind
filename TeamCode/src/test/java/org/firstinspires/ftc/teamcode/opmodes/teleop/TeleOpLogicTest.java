@@ -6,7 +6,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import org.firstinspires.ftc.teamcode.config.LauncherConstants;
 import org.firstinspires.ftc.teamcode.config.MatchConstants;
+import org.firstinspires.ftc.teamcode.subsystems.ElementCounter;
+import org.firstinspires.ftc.teamcode.util.PoseStorage;
 import org.firstinspires.ftc.teamcode.subsystems.BallColor;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.junit.Test;
@@ -91,5 +94,31 @@ public class TeleOpLogicTest {
         alerts.reset();
         assertEquals(EndgameAlerts.Alert.FIRST_WARNING,
                 alerts.update(MatchConstants.FIRST_ENDGAME_WARNING_SECONDS - 0.5));
+    }
+
+    /** G407 hand-off: TeleOp starts from the AUTO count, or the preload when AUTO did not run. */
+    @Test
+    public void teleOpElementCountComesFromAuto() {
+        PoseStorage.clear();
+        assertEquals("No AUTO: the preload is still on board", LauncherConstants.PRELOAD_BALLS,
+                TeleOpLogic.initialElementCount(PoseStorage.getElementCount(-1)));
+        PoseStorage.saveElementCount(1);
+        assertEquals(1, TeleOpLogic.initialElementCount(PoseStorage.getElementCount(-1)));
+        PoseStorage.saveElementCount(0);
+        assertEquals(0, TeleOpLogic.initialElementCount(PoseStorage.getElementCount(-1)));
+        assertEquals("Never above the G407 limit", MatchConstants.MAX_CONTROLLED_ELEMENTS,
+                TeleOpLogic.initialElementCount(9));
+        PoseStorage.clear();
+        assertEquals(-1, PoseStorage.getElementCount(-1));
+    }
+
+    /** G407 end to end: with the AUTO count handed over, the 5th pickup is refused. */
+    @Test
+    public void fifthElementAfterAutoIsRefused() {
+        ElementCounter counter = new ElementCounter(null, null);
+        counter.setCount(TeleOpLogic.initialElementCount(3));
+        assertTrue(counter.recordCollected());
+        assertFalse("5th element refused", counter.recordCollected());
+        assertEquals(MatchConstants.MAX_CONTROLLED_ELEMENTS, counter.getCount());
     }
 }

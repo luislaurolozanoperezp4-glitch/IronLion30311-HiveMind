@@ -1,6 +1,6 @@
 // Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/Intake.java @ a7b8f4c (states, ramp, stop, getState, getPower)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PedroAutoBase.java @ a7b8f4c (intake shake: short reverse to free a stuck ball)
-//          — adapted for BIOBUZZ (update(collect, eject) -> collect()/eject()/idle() + periodic(); G407 collect gate; G408 opponent NECTAR rejection)
+//          — adapted for BIOBUZZ (update(collect, eject) -> collect()/eject()/idle() + periodic(); G407 collect gate; G408 stop for opponent NECTAR)
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -25,9 +25,12 @@ import java.util.function.BooleanSupplier;
  *   <li><b>G407</b> ({@link #setCollectGate(BooleanSupplier)}): when the gate says the robot
  *   already controls the maximum number of elements, {@link #collect()} is refused and the
  *   intake stays stopped ({@link State#FULL}).</li>
- *   <li><b>G408</b> ({@link #setRejectDetector(BooleanSupplier)}): while collecting, if the
- *   detector sees the opponent's NECTAR at the intake, the intake runs outward for
- *   {@link IntakeConstants#REJECT_EJECT_SECONDS} to push it away ({@link State#REJECTING}).</li>
+ *   <li><b>G408</b> ({@link #setOpponentNectarDetector(BooleanSupplier)}): while collecting, if
+ *   the detector sees the opponent's NECTAR at the intake, the intake STOPS (it neither pulls the
+ *   ball in nor pushes it out) until the ball has been gone for
+ *   {@link IntakeConstants#OPPONENT_NECTAR_HOLD_SECONDS} ({@link State#OPPONENT_NECTAR}). Team
+ *   decision: pushing it away is not allowed either (G408 control, G405 if it leaves the FIELD,
+ *   G402 in AUTO).</li>
  * </ul>
  */
 public class Intake implements Subsystem {
@@ -44,8 +47,8 @@ public class Intake implements Subsystem {
         EJECTING,
         /** Short reverse to free a stuck ball. */
         SHAKING,
-        /** Pushing away an opponent NECTAR (G408). */
-        REJECTING,
+        /** Stopped because the opponent's NECTAR is at the intake (G408). Never pushes it. */
+        OPPONENT_NECTAR,
         /** Collect refused: the robot already controls the maximum number of elements (G407). */
         FULL
     }
@@ -55,15 +58,15 @@ public class Intake implements Subsystem {
     private final SlewRateLimiter ramp = new SlewRateLimiter(IntakeConstants.RAMP_SECONDS);
 
     private BooleanSupplier collectGate;
-    private BooleanSupplier rejectDetector;
+    private BooleanSupplier opponentNectarDetector;
 
     private State requested = State.IDLE;
     private State state = State.IDLE;
     private double shakeEndSec = Double.NaN;
-    private double rejectEndSec = Double.NaN;
+    private double opponentNectarLastSeenSec = Double.NaN;
     private double lastTimeSec = Double.NaN;
     private double lastWrittenPower = 0.0;
-    private int rejectCount = 0;
+    private int opponentNectarStopCount = 0;
 
     /** @param hardware robot hardware; the intake motor may be missing */
     public Intake(RobotHardware hardware) {
@@ -87,8 +90,8 @@ public class Intake implements Subsystem {
     }
 
     /** @param detector returns true when the opponent's NECTAR is at the intake (G408), or null */
-    public void setRejectDetector(BooleanSupplier detector) {
-        rejectDetector = detector;
+    public void setOpponentNectarDetector(BooleanSupplier detector) {
+        opponentNectarDetector = detector;
     }
 
     /** Pull balls in (refused while the robot is full, see {@link #setCollectGate}). */
@@ -137,20 +140,22 @@ public class Intake implements Subsystem {
             shakeEndSec = Double.NaN;
         }
         if (requested != State.COLLECTING) {
-            rejectEndSec = Double.NaN;
+            opponentNectarLastSeenSec = Double.NaN;
             return requested;
         }
-        if (!Double.isNaN(rejectEndSec)) {
-            if (nowSec < rejectEndSec) {
-                return State.REJECTING;
+        if (IntakeConstants.STOP_FOR_OPPONENT_NECTAR && opponentNectarDetector != null
+                && opponentNectarDetector.getAsBoolean()) {
+            if (state != State.OPPONENT_NECTAR) {
+                opponentNectarStopCount++;
             }
-            rejectEndSec = Double.NaN;
+            opponentNectarLastSeenSec = nowSec;
+            return State.OPPONENT_NECTAR;
         }
-        if (IntakeConstants.REJECT_OPPONENT_NECTAR && rejectDetector != null
-                && rejectDetector.getAsBoolean()) {
-            rejectEndSec = nowSec + IntakeConstants.REJECT_EJECT_SECONDS;
-            rejectCount++;
-            return State.REJECTING;
+        if (!Double.isNaN(opponentNectarLastSeenSec)) {
+            if (nowSec - opponentNectarLastSeenSec < IntakeConstants.OPPONENT_NECTAR_HOLD_SECONDS) {
+                return State.OPPONENT_NECTAR;
+            }
+            opponentNectarLastSeenSec = Double.NaN;
         }
         if (collectGate != null && !collectGate.getAsBoolean()) {
             return State.FULL;
@@ -164,7 +169,7 @@ public class Intake implements Subsystem {
         requested = State.IDLE;
         state = State.IDLE;
         shakeEndSec = Double.NaN;
-        rejectEndSec = Double.NaN;
+        opponentNectarLastSeenSec = Double.NaN;
         ramp.reset(0.0);
         writePower(0.0);
     }
@@ -189,9 +194,14 @@ public class Intake implements Subsystem {
         return state == State.FULL;
     }
 
-    /** @return how many times an opponent NECTAR was pushed away */
-    public int getRejectCount() {
-        return rejectCount;
+    /** @return true while collecting is paused for the opponent's NECTAR (G408) */
+    public boolean isStoppedForOpponentNectar() {
+        return state == State.OPPONENT_NECTAR;
+    }
+
+    /** @return how many times the intake stopped for an opponent NECTAR */
+    public int getOpponentNectarStopCount() {
+        return opponentNectarStopCount;
     }
 
     /** @return the power applied to the motor, -1 to 1 */
@@ -217,7 +227,6 @@ public class Intake implements Subsystem {
                 return IntakeConstants.COLLECT_POWER;
             case EJECTING:
             case SHAKING:
-            case REJECTING:
                 return -IntakeConstants.EJECT_POWER;
             default:
                 return 0.0;

@@ -2,6 +2,7 @@
 //          — adapted for BIOBUZZ (pure helpers so they can be tested without a robot)
 package org.firstinspires.ftc.teamcode.opmodes.teleop;
 
+import org.firstinspires.ftc.teamcode.config.LauncherConstants;
 import org.firstinspires.ftc.teamcode.config.MatchConstants;
 import org.firstinspires.ftc.teamcode.subsystems.BallColor;
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -90,8 +91,20 @@ public final class TeleOpLogic {
     }
 
     /**
+     * G407 hand-off: the element count TeleOp starts with.
+     *
+     * @param autoCount the count AUTO saved, or a negative number if AUTO saved none
+     * @return the AUTO count (clamped to the G407 limit), or the preload when AUTO did not run
+     *         (a robot that did not run AUTO still holds its pre-loaded POLLEN)
+     */
+    public static int initialElementCount(int autoCount) {
+        int count = autoCount < 0 ? LauncherConstants.PRELOAD_BALLS : autoCount;
+        return Math.min(count, MatchConstants.MAX_CONTROLLED_ELEMENTS);
+    }
+
+    /**
      * Ball-assist colors: POLLEN and our own NECTAR. The tested robot turned toward any ball;
-     * turning toward the opponent's NECTAR only makes the intake reject it (G408).
+     * turning toward the opponent's NECTAR only makes the intake stop for it (G408).
      *
      * @param alliance our alliance
      * @return the colors the ball assist may turn toward

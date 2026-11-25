@@ -110,6 +110,7 @@ public abstract class TeleOpBase extends OpMode {
     private boolean wasAligning = false;
     private boolean wasLowBattery = false;
     private boolean wasFull = false;
+    private boolean wasStoppedForOpponentNectar = false;
     private boolean hasTarget = false;
     private boolean isFeedingNow = false;
     private final int[] markCounts = new int[ShotMark.values().length];
@@ -164,7 +165,7 @@ public abstract class TeleOpBase extends OpMode {
         lights.showAlliance(alliance);
     }
 
-    /** G407 collect gate, G408 opponent NECTAR rejection, G410 flower arm gate. */
+    /** G407 collect gate, G408 stop for opponent NECTAR, G410 flower arm gate. */
     private void wireRules() {
         final ElementCounter counter = elementCounter;
         intake.setCollectGate(new BooleanSupplier() {
@@ -175,7 +176,7 @@ public abstract class TeleOpBase extends OpMode {
         });
         final ColorSensing sensing = colorSensing;
         final Alliance ourAlliance = alliance;
-        intake.setRejectDetector(new BooleanSupplier() {
+        intake.setOpponentNectarDetector(new BooleanSupplier() {
             @Override
             public boolean getAsBoolean() {
                 return sensing.isOpponentNectarAtIntake(ourAlliance);
@@ -259,11 +260,14 @@ public abstract class TeleOpBase extends OpMode {
         telemetry.update();
     }
 
-    /** Starts the match clock and the match log; forgets the AUTO pose. */
+    /** Starts the match clock and the match log; takes the AUTO element count; forgets the AUTO pose. */
     @Override
     public void start() {
         matchTimer.start();
         endgameAlerts.reset();
+        // G407: start from what AUTO left on board; without AUTO the robot still holds its preload.
+        elementCounter.setCount(TeleOpLogic.initialElementCount(
+                PoseStorage.getElementCount(-1)));
         PoseStorage.clear();
         if (ControlConstants.MATCH_LOG_ENABLED) {
             matchLog.open(MATCH_LOG_FOLDER, getLogTag(), MATCH_LOG_HEADER);
@@ -315,6 +319,13 @@ public abstract class TeleOpBase extends OpMode {
             operator.rumbleLong();
             pendingEvent = "endgame_start";
         }
+
+        // G408: the intake stopped for the opponent's NECTAR; tell the driver once per event.
+        boolean isStoppedForOpponentNectar = intake.isStoppedForOpponentNectar();
+        if (isStoppedForOpponentNectar && !wasStoppedForOpponentNectar) {
+            driver.rumbleShort();
+        }
+        wasStoppedForOpponentNectar = isStoppedForOpponentNectar;
 
         if (battery.isLow() && !wasLowBattery) {
             gamepad1.rumble(ControlConstants.LOW_BATTERY_RUMBLE_MILLIS);
@@ -594,8 +605,10 @@ public abstract class TeleOpBase extends OpMode {
     /** First lines in both modes: match phase, time, and anything the drivers must act on. */
     private void addBanner() {
         String clock = TeleOpLogic.formatClock(matchTimer.getRemainingSeconds());
-        if (matchTimer.isEndgame()) {
+        if (matchTimer.canPlaceNectar()) {
             telemetry.addLine("*** ENDGAME " + clock + " - NECTAR + flower arm allowed ***");
+        } else if (matchTimer.isEndgame()) {
+            telemetry.addLine("*** ENDGAME " + clock + " - flower arm unlocks in a moment (G410) ***");
         } else {
             telemetry.addLine(alliance + " TELEOP " + clock + " (endgame at "
                     + TeleOpLogic.formatClock(MatchConstants.NECTAR_UNLOCK_SECONDS) + ")");
@@ -607,7 +620,9 @@ public abstract class TeleOpBase extends OpMode {
         if (indexer.isJammed()) {
             telemetry.addLine("!! INDEXER JAMMED - release fire to clear it");
         }
-        if (lights.getNectarAlertColor() != null) {
+        if (intake.isStoppedForOpponentNectar()) {
+            telemetry.addLine("!! OPPONENT NECTAR AT THE INTAKE - intake stopped (G408): drive away, do not push it");
+        } else if (lights.getNectarAlertColor() != null) {
             telemetry.addLine("!! NECTAR AT THE INTAKE: " + lights.getNectarAlertColor()
                     + " (eject: gamepad1 RB)");
         }
@@ -660,7 +675,7 @@ public abstract class TeleOpBase extends OpMode {
         for (Subsystem subsystem : subsystems) {
             subsystem.addTelemetry(telemetry);
         }
-        telemetry.addData("Rejected opponent NECTAR", intake.getRejectCount());
+        telemetry.addData("Intake stops for opponent NECTAR", intake.getOpponentNectarStopCount());
         telemetry.addData("Shot marks", "short %d | long %d | wide %d",
                 markCounts[ShotMark.SHORT.ordinal()], markCounts[ShotMark.LONG.ordinal()],
                 markCounts[ShotMark.WIDE.ordinal()]);

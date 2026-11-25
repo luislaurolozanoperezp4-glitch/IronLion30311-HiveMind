@@ -29,7 +29,7 @@ import java.util.List;
  * {@code BLUE_NECTAR}, or why it was ignored). Use it to tune
  * {@link VisionConstants#HUSKY_MIN_BLOCK_AREA_PIXELS} (smallest real ball) and
  * {@link VisionConstants#INTAKE_ZONE_Y_OFFSET} (how low in the image a ball is "at the intake",
- * used by the G408 rejection and the NECTAR alert).
+ * used by the G408 intake stop and the NECTAR alert).
  * <p>
  * gamepad1: LB hold = intake collects (balls are counted, as in TeleOp), RB hold = eject,
  * X = reset the counts.
