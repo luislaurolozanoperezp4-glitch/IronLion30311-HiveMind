@@ -100,10 +100,10 @@ public class Indexer implements Subsystem {
      * jam protection. Ignored while ejecting, and when
      * {@link IndexerConstants#PAUSE_WHEN_NOT_READY} is false.
      *
-     * @param paused true to wait
+     * @param shouldPause true to wait
      */
-    public void setPaused(boolean paused) {
-        isPaused = paused;
+    public void setPaused(boolean shouldPause) {
+        isPaused = shouldPause;
     }
 
     /** Runs the state machine and the power ramp. Call once per loop. */

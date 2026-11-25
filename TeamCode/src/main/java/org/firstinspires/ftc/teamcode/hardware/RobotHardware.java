@@ -159,7 +159,7 @@ public class RobotHardware {
      * @param <T>         device type
      * @return the device, or {@code null} if it is not in the configuration
      */
-    public <T> T getDevice(Class<? extends T> type, String name, String... legacyNames) {
+    public final <T> T getDevice(Class<? extends T> type, String name, String... legacyNames) {
         T device = findDevice(type, name, legacyNames);
         if (device == null) {
             warnings.add("Missing " + type.getSimpleName() + " \"" + name + "\""

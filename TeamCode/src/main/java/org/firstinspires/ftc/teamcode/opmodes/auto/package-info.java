@@ -1,3 +1,4 @@
+// Sources: new for IronLion30311-HiveMind (package documentation)
 /**
  * Competition autonomous OpModes: {@code AutoBase} (shared loop, INIT menu, guards),
  * {@code ScoringAuto} (the near/far scoring routine), one thin class per alliance and start

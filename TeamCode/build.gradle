@@ -38,3 +38,10 @@ android {
         unitTests.returnDefaultValues = true
     }
 }
+
+// Show every javac warning for TeamCode code (not the SDK), so new ones are noticed.
+// "options" is the Java 8 target notice from the SDK setup; "processing" and "classfile" come
+// from libraries, not from our code.
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ['-Xlint:all', '-Xlint:-options', '-Xlint:-processing', '-Xlint:-classfile']
+}
