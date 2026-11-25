@@ -50,6 +50,9 @@ Commit messages start with the branch type: `feat: ...`, `fix: ...`, `tune: ...`
 
 When `dev` is tested on the robot, open a pull request `dev` → `main`. After it merges, tag it.
 
+`dev` is a protected branch (no deletion, no force push), so GitHub's "automatically delete head
+branches" setting never deletes it after a `dev` → `main` merge. Never uncheck that protection.
+
 ## Events are tags, not branches
 
 ```bash

@@ -6,6 +6,7 @@ package org.firstinspires.ftc.teamcode.opmodes.auto;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
+import com.pedropathing.paths.Path;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.teamcode.config.AutoConstants;
@@ -13,6 +14,8 @@ import org.firstinspires.ftc.teamcode.config.DriveConstants;
 import org.firstinspires.ftc.teamcode.config.LauncherConstants;
 import org.firstinspires.ftc.teamcode.hardware.RobotHardware;
 import org.firstinspires.ftc.teamcode.pathing.AutoPlanner;
+import org.firstinspires.ftc.teamcode.pathing.DriveRoute;
+import org.firstinspires.ftc.teamcode.pathing.HybridDrive;
 import org.firstinspires.ftc.teamcode.pathing.FieldDrawing;
 import org.firstinspires.ftc.teamcode.pathing.OdometryDriver;
 import org.firstinspires.ftc.teamcode.pathing.PedroConstants;
@@ -389,7 +392,8 @@ public abstract class AutoBase extends OpMode {
         String cancelled = sequence.getCurrentName();
         isParking = true;
         stopMechanisms();
-        sequence.abortAndReplace(parkSteps("Time park", EmergencyPark.plan(pose, getAlliance()), false));
+        sequence.abortAndReplace(parkSteps(DriveRoute.EMERGENCY_PARK, "Time park",
+                EmergencyPark.plan(pose, getAlliance()), false));
         sequence.note(String.format(Locale.US,
                 "TIME: %.1f s left, park needs ~%.1f s: stopped '%s' and parking",
                 matchTimer.getRemainingSeconds(), parkSeconds, cancelled));
@@ -480,8 +484,8 @@ public abstract class AutoBase extends OpMode {
      *                        false = pass through all but the last
      * @return the steps
      */
-    protected List<AutoStep> parkSteps(String name, List<Pose> waypoints, boolean isStopEachLeg) {
-        return parkSteps(name, waypoints, isStopEachLeg, DriveConstants.AUTO_MAX_POWER);
+    protected List<AutoStep> parkSteps(DriveRoute route, String name, List<Pose> waypoints, boolean isStopEachLeg) {
+        return parkSteps(route, name, waypoints, isStopEachLeg, DriveConstants.AUTO_MAX_POWER);
     }
 
     /**
@@ -491,18 +495,19 @@ public abstract class AutoBase extends OpMode {
      *
      * @param name          leg name prefix
      * @param waypoints     field waypoints, the last is PARK
-     * @param isStopEachLeg see {@link #parkSteps(String, List, boolean)}
+     * @param isStopEachLeg see {@link #parkSteps(DriveRoute, String, List, boolean)}
      * @return the steps
      */
-    protected List<AutoStep> timedParkSteps(String name, List<Pose> waypoints, boolean isStopEachLeg) {
-        List<Pose> route = new ArrayList<>();
-        route.add(getPose());
-        route.addAll(waypoints);
-        double power = planner.getParkPower(route);
+    protected List<AutoStep> timedParkSteps(DriveRoute route, String name, List<Pose> waypoints,
+                                            boolean isStopEachLeg) {
+        List<Pose> plan = new ArrayList<>();
+        plan.add(getPose());
+        plan.addAll(waypoints);
+        double power = planner.getParkPower(plan);
         sequence.note(String.format(Locale.US, "Park plan at %.1f s: power %.2f, ~%.1f s, deadline %.1f s",
-                matchTimer.getElapsedSeconds(), power, AutoPlanner.estimateRouteSeconds(power, route),
+                matchTimer.getElapsedSeconds(), power, AutoPlanner.estimateRouteSeconds(power, plan),
                 AutoPlanner.getParkDeadlineSeconds()));
-        return parkSteps(name, waypoints, isStopEachLeg, power);
+        return parkSteps(route, name, waypoints, isStopEachLeg, power);
     }
 
     /**
@@ -510,14 +515,24 @@ public abstract class AutoBase extends OpMode {
      *
      * @param name          leg name prefix
      * @param waypoints     field waypoints, the last is PARK
-     * @param isStopEachLeg see {@link #parkSteps(String, List, boolean)}
+     * @param isStopEachLeg see {@link #parkSteps(DriveRoute, String, List, boolean)}
      * @param power         top power of every leg
      * @return the steps
      */
-    protected List<AutoStep> parkSteps(String name, List<Pose> waypoints, boolean isStopEachLeg,
-                                       double power) {
+    protected List<AutoStep> parkSteps(DriveRoute route, String name, List<Pose> waypoints,
+                                       boolean isStopEachLeg, double power) {
         List<AutoStep> steps = new ArrayList<>();
         steps.add(markParking());
+        if (HybridDrive.usesPedro(route)) {
+            // Hybrid: Pedro carries the robot through the long legs, the odometry driver does
+            // the last precise inches into PARK (docs/PEDRO_TUNING.md)
+            Pose park = waypoints.get(waypoints.size() - 1);
+            steps.add(new PedroFollowStep(name + " (Pedro)", waypoints, Mode.IDLE));
+            steps.add(driveTo(name + " final", park, power, Mode.IDLE));
+            steps.add(settle(AutoConstants.SETTLE_SECONDS, Mode.IDLE));
+            steps.add(holdParked());
+            return steps;
+        }
         for (int i = 0; i < waypoints.size(); i++) {
             String legName = String.format(Locale.US, "%s leg %d/%d", name, i + 1, waypoints.size());
             boolean isLast = i == waypoints.size() - 1;
@@ -1090,6 +1105,120 @@ public abstract class AutoBase extends OpMode {
         double moveInches = moveCm / CM_PER_INCH;
         return new Pose(pose.x() - Math.cos(pose.heading()) * moveInches,
                 pose.y() - Math.sin(pose.heading()) * moveInches, pose.heading());
+    }
+
+    /**
+     * Legs of a multi-leg route that does not park (for example around the HIVE to the other
+     * cell). Odometry driver: pass through every waypoint, stop at the last (the TESTED way).
+     * Pedro (when {@link HybridDrive#usesPedro} is true): one Pedro path through all waypoints,
+     * then the odometry driver finishes on the last one.
+     *
+     * @param route     which route this is
+     * @param name      leg name prefix
+     * @param waypoints field waypoints, the robot stops at the last
+     * @param mode      mechanisms during the legs
+     * @return the steps
+     */
+    protected List<AutoStep> routeLegs(DriveRoute route, String name, List<Pose> waypoints, Mode mode) {
+        List<AutoStep> steps = new ArrayList<>();
+        Pose last = waypoints.get(waypoints.size() - 1);
+        if (HybridDrive.usesPedro(route)) {
+            steps.add(new PedroFollowStep(name + " (Pedro)", waypoints, mode));
+            steps.add(driveTo(name + " final", last, mode));
+            return steps;
+        }
+        for (int i = 0; i < waypoints.size() - 1; i++) {
+            steps.add(driveThrough(String.format(Locale.US, "%s leg %d/%d", name, i + 1, waypoints.size()),
+                    waypoints.get(i), mode));
+        }
+        steps.add(driveTo(String.format(Locale.US, "%s leg %d/%d", name, waypoints.size(), waypoints.size()),
+                last, mode));
+        return steps;
+    }
+
+    /**
+     * Follows one Pedro path through a route's waypoints (hybrid drive). Ends when Pedro reports
+     * the path finished, on timeout, or when the drive is locked (G402 guard, lost odometry);
+     * the time guard cancels it like any other step.
+     */
+    private class PedroFollowStep extends AutoStep {
+
+        private final List<Pose> waypoints;
+        private final Mode mode;
+        private boolean isSkipped;
+        private boolean isStarted;
+        private double startSeconds;
+        private double timeoutSeconds;
+        private String resultText = "";
+
+        PedroFollowStep(String name, List<Pose> waypoints, Mode mode) {
+            super(name);
+            this.waypoints = new ArrayList<>(waypoints);
+            this.mode = mode;
+        }
+
+        @Override
+        public void start() {
+            applyMode(mode);
+            isSkipped = !canDrive() || follower == null;
+            if (isSkipped) {
+                resultText = getName() + ": SKIPPED (drive stopped)";
+                return;
+            }
+            Pose start = getPose();
+            Path path = HybridDrive.buildPath(start, waypoints);
+            if (path == null) {
+                isSkipped = true;
+                resultText = getName() + ": already there";
+                return;
+            }
+            driver.cancel();
+            follower.follow(path);
+            isStarted = true;
+            startSeconds = matchTimer.getElapsedSeconds();
+            timeoutSeconds = HybridDrive.getTimeoutSeconds(start, waypoints);
+        }
+
+        @Override
+        public boolean isDone() {
+            if (isSkipped) {
+                return true;
+            }
+            double elapsed = matchTimer.getElapsedSeconds() - startSeconds;
+            if (!canDrive()) {
+                stopPedro();
+                resultText = getName() + ": STOPPED (drive locked)";
+                return true;
+            }
+            if (elapsed > timeoutSeconds) {
+                stopPedro();
+                resultText = String.format(Locale.US, "%s: TIMEOUT after %.1f s (odometry driver finishes)",
+                        getName(), elapsed);
+                return true;
+            }
+            if (!follower.following()) {
+                resultText = String.format(Locale.US, "%s: done in %.1f s", getName(), elapsed);
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public void cancel() {
+            stopPedro();
+        }
+
+        private void stopPedro() {
+            if (isStarted && follower != null) {
+                follower.stop();
+                isStarted = false;
+            }
+        }
+
+        @Override
+        public String getResultText() {
+            return resultText;
+        }
     }
 
     /** A drive move with the odometry driver. */

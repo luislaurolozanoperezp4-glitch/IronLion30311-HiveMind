@@ -18,5 +18,9 @@ BIOBUZZ 2026–27).
 - Pedro Pathing 3 API: poses are `com.pedropathing.math.Pose(x, y, headingRadians)`; the
   follower is built in `pathing/PedroConstants`. Check the Pedro docs before using an API you
   have not seen in this repo.
+- AUTO driving is hybrid: multi-leg routes go through `AutoBase.routeLegs` / `parkSteps` with a
+  `DriveRoute`; `config/HybridDriveConstants` decides Pedro path following vs the tested
+  `OdometryDriver` (all odometry until Pedro is tuned, see `docs/PEDRO_TUNING.md`). Short precise
+  moves always use the odometry driver.
 - Field frame: inches, origin at the red/audience corner, poses written for RED.
 - The source repo `ironlionrobotics/IronLion30311BIOBUZZInicioDeTemporada` is read-only.

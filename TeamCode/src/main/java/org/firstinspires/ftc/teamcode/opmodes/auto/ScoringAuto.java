@@ -11,6 +11,7 @@ import org.firstinspires.ftc.teamcode.config.DriveConstants;
 import org.firstinspires.ftc.teamcode.config.LauncherConstants;
 import org.firstinspires.ftc.teamcode.config.MatchConstants;
 import org.firstinspires.ftc.teamcode.pathing.AutoPlanner;
+import org.firstinspires.ftc.teamcode.pathing.DriveRoute;
 import org.firstinspires.ftc.teamcode.pathing.paths.NearRoutePoses;
 import org.firstinspires.ftc.teamcode.pathing.paths.OtherCellPaths;
 import org.firstinspires.ftc.teamcode.pathing.paths.PreloadCollectPaths;
@@ -115,9 +116,9 @@ public abstract class ScoringAuto extends AutoBase {
 
     private void buildFarOpening(StepSequence sequence) {
         setSpinUpRpm(AutoConstants.OTHER_CELL_POLLEN_RPM);
+        sequence.addAll(routeLegs(DriveRoute.OTHER_CELL_TRANSIT, "To other cell",
+                Arrays.asList(field(NearRoutePoses.NORTH_WAYPOINT), field(NearRoutePoses.OTHER_SPOT)), Mode.SPIN_UP));
         sequence.add(
-                driveThrough("North-west of the HIVE", field(NearRoutePoses.NORTH_WAYPOINT), Mode.SPIN_UP),
-                driveTo("To other cell", field(NearRoutePoses.OTHER_SPOT), Mode.SPIN_UP),
                 settle(AutoConstants.SETTLE_SECONDS, Mode.SPIN_UP),
                 lookForCell("Other cell", HiveCell.getAudienceCell(getAlliance()), AutoConstants.OTHER_CELL_LOOK_SECONDS),
                 AutoStep.instant("Decide at other cell", new Runnable() {
@@ -152,9 +153,11 @@ public abstract class ScoringAuto extends AutoBase {
             getSequence().addNext(nearCycleSteps(cycleSeconds, parkSeconds));
         } else if (cyclesDone == 0) {
             // The TESTED park legs, straight from the preload volley
-            getSequence().addNext(timedParkSteps("Park", new PreloadParkPaths(getAlliance()).getParkWaypoints(), true));
+            getSequence().addNext(timedParkSteps(DriveRoute.PRELOAD_PARK, "Park",
+                    new PreloadParkPaths(getAlliance()).getParkWaypoints(), true));
         } else {
-            getSequence().addNext(timedParkSteps("Park", new PreloadCollectPaths(getAlliance()).getParkWaypoints(), false));
+            getSequence().addNext(timedParkSteps(DriveRoute.CYCLE_PARK, "Park",
+                    new PreloadCollectPaths(getAlliance()).getParkWaypoints(), false));
         }
     }
 
@@ -170,14 +173,15 @@ public abstract class ScoringAuto extends AutoBase {
         if (hasTimeForOtherCell(waypoints)) {
             List<AutoStep> steps = new ArrayList<>();
             // Away from the red wall first (no turn there), then turning north on the way
-            steps.add(driveThrough("Away from the wall", waypoints.get(0), Mode.SPIN_UP));
-            steps.add(driveThrough("North-west of the HIVE", waypoints.get(1), Mode.SPIN_UP));
+            steps.addAll(routeLegs(DriveRoute.OTHER_CELL_TRANSIT, "To other cell",
+                    Arrays.asList(waypoints.get(0), waypoints.get(1), field(NearRoutePoses.OTHER_SPOT)), Mode.SPIN_UP));
             steps.addAll(otherCellSteps(AutoConstants.COLLECT_BALLS));
             getSequence().addNext(steps);
         } else {
             // Too late for the other cell. VA drove the south-west diagonal from the wall here;
             // the emergency park keeps the heading instead (no turn next to the wall).
-            getSequence().addNext(timedParkSteps("Park", EmergencyPark.plan(getPose(), getAlliance()), false));
+            getSequence().addNext(timedParkSteps(DriveRoute.EMERGENCY_PARK, "Park",
+                    EmergencyPark.plan(getPose(), getAlliance()), false));
         }
     }
 
@@ -201,12 +205,13 @@ public abstract class ScoringAuto extends AutoBase {
                         } else if (hasTimeForOtherCell(waypoints)) {
                             List<AutoStep> steps = new ArrayList<>();
                             // Turning to the other-cell heading on the way, south-west of the HIVE
-                            steps.add(driveThrough("South-west of the HIVE", waypoints.get(0), Mode.SPIN_UP));
-                            steps.add(driveThrough("North-west of the HIVE", waypoints.get(1), Mode.SPIN_UP));
+                            steps.addAll(routeLegs(DriveRoute.OTHER_CELL_TRANSIT, "To other cell",
+                                    Arrays.asList(waypoints.get(0), waypoints.get(1),
+                                            field(NearRoutePoses.OTHER_SPOT)), Mode.SPIN_UP));
                             steps.addAll(otherCellSteps(AutoConstants.COLLECT_BALLS));
                             getSequence().addNext(steps);
                         } else {
-                            getSequence().addNext(timedParkSteps("Park",
+                            getSequence().addNext(timedParkSteps(DriveRoute.CYCLE_PARK, "Park",
                                     new PreloadCollectPaths(getAlliance()).getParkWaypoints(), false));
                         }
                     }
@@ -303,11 +308,10 @@ public abstract class ScoringAuto extends AutoBase {
                 })));
     }
 
-    /** From the north-west waypoint: to the other-cell spot, look for the cell, decide. */
+    /** At the other-cell spot (the caller drove there with routeLegs): look for the cell, decide. */
     private List<AutoStep> otherCellSteps(final int balls) {
         setSpinUpRpm(AutoConstants.OTHER_CELL_POLLEN_RPM);
         return new ArrayList<>(Arrays.asList(
-                driveTo("To other cell", field(NearRoutePoses.OTHER_SPOT), Mode.SPIN_UP),
                 settle(AutoConstants.SETTLE_SECONDS, Mode.SPIN_UP),
                 lookForCell("Other cell", HiveCell.getAudienceCell(getAlliance()), AutoConstants.OTHER_CELL_LOOK_SECONDS),
                 AutoStep.instant("Decide at other cell", new Runnable() {
@@ -344,15 +348,14 @@ public abstract class ScoringAuto extends AutoBase {
 
     /** Other-cell spot down the west lane to the shooting spot (turning in the lane). */
     private List<AutoStep> otherSpotLegsToShootSpot(Mode mode) {
-        return new ArrayList<>(Arrays.asList(
-                driveThrough("North-west of the HIVE", field(NearRoutePoses.NORTH_WAYPOINT), mode),
-                driveThrough("South-west of the HIVE", field(NearRoutePoses.SOUTH_WAYPOINT), mode),
-                driveTo("To shoot spot", field(NearRoutePoses.SHOOT_SPOT), mode)));
+        return routeLegs(DriveRoute.OTHER_CELL_TRANSIT, "To shoot spot",
+                Arrays.asList(field(NearRoutePoses.NORTH_WAYPOINT), field(NearRoutePoses.SOUTH_WAYPOINT),
+                        field(NearRoutePoses.SHOOT_SPOT)), mode);
     }
 
     /** One diagonal north of the HIVE into PARK (the park leg of the other-cell route). */
     private List<AutoStep> parkFromOtherSideSteps() {
-        return timedParkSteps("Park from other side", otherSideParkWaypoints(), false);
+        return timedParkSteps(DriveRoute.OTHER_SIDE_PARK, "Park from other side", otherSideParkWaypoints(), false);
     }
 
     // ------------------------------------------------------------------------------------------
