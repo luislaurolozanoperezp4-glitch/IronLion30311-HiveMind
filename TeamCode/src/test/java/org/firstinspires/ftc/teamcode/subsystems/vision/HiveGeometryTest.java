@@ -22,7 +22,7 @@ public class HiveGeometryTest {
         tags[31] = new double[]{-0.06, 1.0, 0.0, 1.0, 170.0, -80.0, 5.0};
         tags[32] = new double[]{0.06, 1.0, 0.0, 1.0, -170.0, -100.0, -5.0};
 
-        HiveClusterPose pose = HiveGeometry.reconstructRawCellPose(HiveCell.RED_SCORING, tags);
+        HiveClusterPose pose = HiveGeometry.reconstructRawCellPose(HiveCell.RED_BACK, tags);
 
         assertNotNull(pose);
         assertEquals(180.0, Math.abs(pose.rollDeg), TOLERANCE);

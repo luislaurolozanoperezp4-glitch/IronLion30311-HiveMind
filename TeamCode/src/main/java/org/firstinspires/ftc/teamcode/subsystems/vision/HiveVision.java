@@ -170,7 +170,7 @@ public class HiveVision {
         for (Map.Entry<Alliance, HiveStateTracker> entry : stateTrackers.entrySet()) {
             Alliance alliance = entry.getKey();
             entry.getValue().update(
-                    classifyUpright(latestCellPoses.get(HiveCell.getScoringCell(alliance))),
+                    classifyUpright(latestCellPoses.get(HiveCell.getBackCell(alliance))),
                     classifyUpright(latestCellPoses.get(HiveCell.getAudienceCell(alliance))),
                     nowMs);
         }
@@ -185,7 +185,7 @@ public class HiveVision {
      */
     public HiveCell getAllianceTarget(Alliance alliance) {
         return stateTrackers.get(alliance).selectTarget(
-                classifyUpright(latestCellPoses.get(HiveCell.getScoringCell(alliance))),
+                classifyUpright(latestCellPoses.get(HiveCell.getBackCell(alliance))),
                 classifyUpright(latestCellPoses.get(HiveCell.getAudienceCell(alliance))),
                 nowMs());
     }

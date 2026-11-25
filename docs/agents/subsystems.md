@@ -64,7 +64,7 @@ collect values); `IndexerConstants.DIRECTION`, `CURRENT_CHECK_INTERVAL_SECONDS`,
 | `HiveAlignController` | `vision.HiveAligner` |
 | `HiveAlignController.ENABLED` etc. | `VisionConstants.HIVE_ALIGN_ENABLED`, `ALIGN_*` |
 | `HiveGeometry.CAMERA_PITCH_DEG`, `DEFAULT_TAG_SPACING_METERS` | `VisionConstants.CAMERA_PITCH_DEGREES`, `TAG_SPACING_METERS` |
-| `vision.Alliance.getScoringCell()/getAudienceCell()` | `HiveCell.getScoringCell(Alliance)/getAudienceCell(Alliance)` |
+| `vision.Alliance.getScoringCell()/getAudienceCell()` | `HiveCell.getBackCell(Alliance)/getAudienceCell(Alliance)` (renamed from `getScoringCell`, D20) |
 | `IndicatorLight` + `NectarAlertLight` | `Lights` |
 | `PedroAutoBase.shootPollenPreload/collectBalls/watchForTip` | `ShootingSequence`, `CollectSequence`, `TipWatch` |
 | `LogFiles` | `DataLogger` |
@@ -117,8 +117,8 @@ subsystem `periodic()` (ColorSensing and Launcher before ElementCounter) -> `add
   `isCellInView(cell)`, `hasSeenCell(cell)`, `getSecondsSinceSeen(cell)`,
   `isCellDown(cell, goneSec)`, `getVisibleTagIds()`, `getRawTagDistanceMeters()`,
   `getHiveVision()`, `isConnected()`.
-- **HiveCell**: `RED_SCORING, RED_AUDIENCE, BLUE_AUDIENCE, BLUE_SCORING`;
-  static `getScoringCell(Alliance)`, `getAudienceCell(Alliance)`, `fromTagId(id)`.
+- **HiveCell**: `RED_BACK, RED_AUDIENCE, BLUE_AUDIENCE, BLUE_BACK` (manual TU10 9.9 names, D20 confirmed);
+  static `getBackCell(Alliance)`, `getAudienceCell(Alliance)`, `fromTagId(id)`.
 - **HiveAligner** `(vision.getHiveVision(), drivetrain)`: `isEnabled()`, `alignTo(cell)`,
   `evaluate(cell)` (no driving), `isAligned()`, `reset()`, `get{Forward,Strafe,Turn}Command()`.
 - **Lights**: `setRed/Blue/Yellow/White/Green/Off()`, `blink(color)`, `showAlliance(a)`,
@@ -152,7 +152,7 @@ subsystem `periodic()` (ColorSensing and Launcher before ElementCounter) -> `add
 - Bulk caching is MANUAL (VA used AUTO): OpModes MUST call `hardware.clearBulkCache()` each loop,
   also in AUTO next to `follower.update()`, or encoder/velocity reads go stale.
 - `BatteryMonitor` lives in `subsystems/` (ARCHITECTURE.md), not `util/`.
-- HIVE cells keep VA names (`RED_SCORING`/`RED_AUDIENCE`), not `RED_SOUTH/NORTH`, until D20.
+- HIVE cells use the manual's terms since D20 was confirmed: `RED_BACK` (30–33, opposite the audience) / `RED_AUDIENCE` (34–37); see docs/RULES_COMPLIANCE.md.
   Cell helpers are static on `HiveCell` because `util.Alliance` API must not change.
 - NCAM odometry aim fallback (`syncOdometry`, `getAimErrorDeg`) was NOT ported (aligner is disabled;
   NCAM code not reviewed). Launcher/Pose loggers (`LauncherLogger`, `MatchSummary`, ...) not ported;

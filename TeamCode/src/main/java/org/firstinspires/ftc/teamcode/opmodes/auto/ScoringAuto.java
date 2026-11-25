@@ -87,7 +87,7 @@ public abstract class ScoringAuto extends AutoBase {
                 AutoStep.instant("Measure HIVE distance", new Runnable() {
                     @Override
                     public void run() {
-                        shootDistanceMeters = cellForwardMeters(HiveCell.getScoringCell(getAlliance()));
+                        shootDistanceMeters = cellForwardMeters(HiveCell.getBackCell(getAlliance()));
                     }
                 }),
                 shoot("Preload volley", LauncherConstants.PRELOAD_BALLS, LauncherConstants.POLLEN_AUTO_RPM,
@@ -177,7 +177,7 @@ public abstract class ScoringAuto extends AutoBase {
             return;
         }
         getSequence().addNext(
-                lookForCell("TIP check", HiveCell.getScoringCell(getAlliance()), AutoConstants.TIP_CHECK_SECONDS),
+                lookForCell("TIP check", HiveCell.getBackCell(getAlliance()), AutoConstants.TIP_CHECK_SECONDS),
                 AutoStep.instant("Decide after TIP check", new Runnable() {
                     @Override
                     public void run() {
@@ -234,7 +234,7 @@ public abstract class ScoringAuto extends AutoBase {
     private List<AutoStep> nearCycleSteps(final double cycleSeconds, final double parkSeconds) {
         List<Pose> collect = new PreloadCollectPaths(getAlliance()).getCollectWaypoints();
         return new ArrayList<>(Arrays.asList(
-                watchForTip("Early TIP watch", HiveCell.getScoringCell(getAlliance()), new DoubleSupplier() {
+                watchForTip("Early TIP watch", HiveCell.getBackCell(getAlliance()), new DoubleSupplier() {
                     @Override
                     public double getAsDouble() {
                         // Only the slack left after the cycle and the park (the watch is optional)
