@@ -17,6 +17,7 @@ import org.firstinspires.ftc.teamcode.util.GamepadEx.Button;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Shows what the HuskyLens (front, intake side) sees and how the code classifies it.
@@ -122,7 +123,7 @@ public class TuneColorSensor extends OpMode {
         }
         ColorSensing.Ball closest = colorSensing.getClosestBall();
         telemetry.addData("Closest", closest == null ? "none"
-                : String.format("%s x %.2f y %.2f area %d", closest.color, closest.xOffset,
+                : String.format(Locale.US, "%s x %.2f y %.2f area %d", closest.color, closest.xOffset,
                 closest.yOffset, closest.areaPixels));
         telemetry.addData("NECTAR at intake", colorSensing.isNectarAtIntake());
         telemetry.addData("Opponent NECTAR at intake", "as RED %s | as BLUE %s",

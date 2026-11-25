@@ -161,14 +161,14 @@ public class Drivetrain implements Subsystem {
      * Turns the brake on or off. While on, power is cut instantly (no ramp) and drive input is
      * ignored. When released, the wheels ramp up from zero.
      *
-     * @param enabled true to stop the wheels
+     * @param isBrakeOn true to stop the wheels
      */
-    public void setBrake(boolean enabled) {
-        if (enabled == isBraking) {
+    public void setBrake(boolean isBrakeOn) {
+        if (isBrakeOn == isBraking) {
             return;
         }
-        isBraking = enabled;
-        if (enabled) {
+        isBraking = isBrakeOn;
+        if (isBrakeOn) {
             cutPower();
         }
     }

@@ -40,6 +40,7 @@ import org.firstinspires.ftc.teamcode.util.PoseStorage;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
@@ -214,8 +215,8 @@ public abstract class TeleOpBase extends OpMode {
             Pose saved = PoseStorage.getPose();
             localizer.setPose(saved);
             Alliance autoAlliance = PoseStorage.getAlliance();
-            handoffText = String.format("AUTO pose (%.1f, %.1f, %.0f deg)%s", saved.x(), saved.y(),
-                    Math.toDegrees(saved.heading()),
+            handoffText = String.format(Locale.US, "AUTO pose (%.1f, %.1f, %.0f deg)%s",
+                    saved.x(), saved.y(), Math.toDegrees(saved.heading()),
                     autoAlliance != null && autoAlliance != alliance
                             ? " !! AUTO ran as " + autoAlliance + ", check the OpMode" : "");
         }
@@ -545,7 +546,7 @@ public abstract class TeleOpBase extends OpMode {
 
     private void markShot(ShotMark mark) {
         markCounts[mark.ordinal()]++;
-        pendingEvent = "mark_" + mark.name().toLowerCase();
+        pendingEvent = "mark_" + mark.name().toLowerCase(Locale.US);
         operator.rumbleShort();
     }
 
@@ -601,7 +602,7 @@ public abstract class TeleOpBase extends OpMode {
                     + TeleOpLogic.formatClock(MatchConstants.NECTAR_UNLOCK_SECONDS) + ")");
         }
         if (battery.isLow()) {
-            telemetry.addLine(String.format("!! BATTERY LOW %.1f V - swap it after this match",
+            telemetry.addLine(String.format(Locale.US, "!! BATTERY LOW %.1f V - swap it after this match",
                     battery.getVolts()));
         }
         if (indexer.isJammed()) {

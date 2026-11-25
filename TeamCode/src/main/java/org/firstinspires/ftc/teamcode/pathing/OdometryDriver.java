@@ -365,13 +365,13 @@ public class OdometryDriver {
     // Control steps (same math as the tested blocking version)
     // ------------------------------------------------------------------------------------------
 
-    private void startLeg(String name, Pose legTarget, double legMaxPower, boolean passThrough) {
+    private void startLeg(String name, Pose legTarget, double legMaxPower, boolean shouldPassThrough) {
         Pose from = base.getPose();
         moveName = name;
         target = legTarget;
         legStart = from;
         maxPower = legMaxPower;
-        isPassThrough = passThrough;
+        isPassThrough = shouldPassThrough;
         double distanceInches = distance(from, legTarget);
         // A slow leg (maxPower below the minimum) drives at maxPower the whole way
         double minPower = Math.min(DriveConstants.AUTO_MIN_POWER, legMaxPower);
@@ -381,9 +381,9 @@ public class OdometryDriver {
                 * Math.min(1.0, legMaxPower / DriveConstants.AUTO_MAX_POWER));
         legDirX = distanceInches > 0.0 ? (legTarget.x() - from.x()) / distanceInches : 0.0;
         legDirY = distanceInches > 0.0 ? (legTarget.y() - from.y()) / distanceInches : 0.0;
-        toleranceInches = passThrough ? DriveConstants.AUTO_PASS_THROUGH_INCHES
+        toleranceInches = shouldPassThrough ? DriveConstants.AUTO_PASS_THROUGH_INCHES
                 : DriveConstants.AUTO_TOLERANCE_INCHES;
-        floorPower = passThrough ? Math.min(legMaxPower, DriveConstants.AUTO_CORNER_POWER) : minPower;
+        floorPower = shouldPassThrough ? Math.min(legMaxPower, DriveConstants.AUTO_CORNER_POWER) : minPower;
         moveStartSeconds = clock.nowSeconds();
         // Continue at the speed a pass-through leg just ended with (only if it just ended)
         power = moveStartSeconds - carriedPowerSeconds < DriveConstants.AUTO_CARRIED_POWER_WINDOW_SECONDS

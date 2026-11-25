@@ -105,9 +105,9 @@ public class HiveAligner implements Subsystem {
             isFirstIteration = true;
             lastAlignToCell = targetCell;
         }
-        boolean aligned = evaluate(targetCell);
+        boolean isOnTarget = evaluate(targetCell);
         drive(forwardCommand, strafeCommand, turnCommand);
-        return aligned;
+        return isOnTarget;
     }
 
     /**

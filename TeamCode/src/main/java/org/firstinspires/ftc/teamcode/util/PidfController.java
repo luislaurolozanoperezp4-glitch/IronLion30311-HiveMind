@@ -70,7 +70,7 @@ public class PidfController {
      * @param d derivative gain
      * @param f feedforward gain
      */
-    public void setGains(double p, double i, double d, double f) {
+    public final void setGains(double p, double i, double d, double f) {
         kP = p;
         kI = i;
         kD = d;
