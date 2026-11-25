@@ -63,7 +63,7 @@ Base source: `VA` = `feature/turrubiates/vision-align` @ a7b8f4c (`MainTeleOp`, 
 | Battery low | Both gamepads rumble once, banner |
 | Indexer jam stop | gamepad2 rumbles until fire is released |
 | Robot full (4 elements, G407) | Collect refused (`Intake` FULL), gamepad1 short rumble, telemetry "FULL (gamepad1 X resets)" |
-| Opponent NECTAR at the intake while collecting (G408) | Intake pushes it out for `REJECT_EJECT_SECONDS` |
+| Opponent NECTAR at the intake while collecting (G408) | Intake **stops** (never pushes it out) until 0.3 s after the ball is gone; gamepad1 rumble + banner. *(Updated 2026-11-25: team decision, see docs/RULES_COMPLIANCE.md; this table first said the intake pushed it out.)* |
 | Firing with `VisionConstants.HIVE_ALIGN_ENABLED` | Auto-align to our upward cell while the sticks are idle (as VA, still disabled by default) |
 
 Lights while running (VA): firing → white (aligning) / solid yellow (feeding) / blinking yellow
@@ -116,7 +116,7 @@ Not duplicated: Test Pedro Pose, Test Odometry Square, Test Odometry Driver, Aut
 3. gamepad2 A auto-shoot with 1–4 balls: stops by itself, manual input cancels it.
 4. Rumbles at 1:05 and 1:00; flower arm refused before 1:00, works after.
 5. G407: collect 4 balls → intake stops; check the count is right (Tune Color Sensor), X resets.
-6. G408: opponent NECTAR in front of the intake is pushed out.
+6. G408: opponent NECTAR in front of the intake stops the intake (it must not push the ball).
 7. Field-centric: BACK while facing away from the drivers, then drive.
 8. Pose handoff: run an AUTO, then TeleOp; INIT shows the AUTO pose.
 9. Match CSV in `/sdcard/FIRST/match_logs`.
