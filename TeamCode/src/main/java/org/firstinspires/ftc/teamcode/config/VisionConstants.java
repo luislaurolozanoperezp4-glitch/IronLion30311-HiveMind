@@ -59,6 +59,15 @@ public final class VisionConstants {
     /** Turn assist toward a seen ball in TeleOp. TODO: TUNE */
     public static double BALL_ASSIST_KP = 0.35;
     public static double BALL_ASSIST_MAX_TURN = 0.3;
+    /** TeleOp ball assist on/off (FTC Dashboard switch, vision-align 023ae35). */
+    public static boolean BALL_ASSIST_ENABLED = true;
+    /**
+     * The ball assist only turns the robot while the driver drives forward at least this much
+     * (shaped stick, 0..1). Vision-align 023ae35: pressing collect at the shooting spot turned
+     * the robot by itself (the HuskyLens also sees a fixed yellow object). TESTED fix on the
+     * vision-align TeleOp; value TODO: TUNE
+     */
+    public static double BALL_ASSIST_MIN_FORWARD = 0.15;
     /** HuskyLens image size in pixels (fixed by the camera). */
     public static final int HUSKY_IMAGE_WIDTH_PIXELS = 320;
     public static final int HUSKY_IMAGE_HEIGHT_PIXELS = 240;

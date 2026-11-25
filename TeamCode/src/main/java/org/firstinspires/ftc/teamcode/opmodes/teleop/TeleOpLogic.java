@@ -1,9 +1,10 @@
-// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/teleop/MainTeleOp.java @ a7b8f4c (isDriverMoving, light choice while firing, speed-mode light)
+// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/teleop/MainTeleOp.java @ a7b8f4c (isDriverMoving, light choice while firing, speed-mode light) @ 023ae35 (ball assist only while driving forward, never while using a launcher)
 //          — adapted for BIOBUZZ (pure helpers so they can be tested without a robot)
 package org.firstinspires.ftc.teamcode.opmodes.teleop;
 
 import org.firstinspires.ftc.teamcode.config.LauncherConstants;
 import org.firstinspires.ftc.teamcode.config.MatchConstants;
+import org.firstinspires.ftc.teamcode.config.VisionConstants;
 import org.firstinspires.ftc.teamcode.subsystems.BallColor;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 
@@ -37,6 +38,24 @@ public final class TeleOpLogic {
     private static final int SECONDS_PER_MINUTE = 60;
 
     private TeleOpLogic() {
+    }
+
+    /**
+     * Whether the HuskyLens ball assist may turn the robot this loop (vision-align 023ae35). It
+     * only helps while the driver collects AND drives forward onto balls without turning, and
+     * never while a launcher is used: at the shooting spot it used to turn the robot on its own
+     * toward a fixed yellow object.
+     *
+     * @param isCollect       true while the collect button is held
+     * @param forward         shaped forward stick (+ = forward)
+     * @param turn            shaped turn stick
+     * @param isUsingLauncher true while firing, auto-shooting or reversing a flywheel
+     * @return true if the assist turn may replace the (zero) turn input
+     */
+    public static boolean shouldBallAssist(boolean isCollect, double forward, double turn,
+                                           boolean isUsingLauncher) {
+        return VisionConstants.BALL_ASSIST_ENABLED && isCollect && turn == 0.0 && !isUsingLauncher
+                && forward >= VisionConstants.BALL_ASSIST_MIN_FORWARD;
     }
 
     /**

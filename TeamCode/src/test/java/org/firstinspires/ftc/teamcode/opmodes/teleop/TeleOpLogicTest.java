@@ -8,6 +8,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.firstinspires.ftc.teamcode.config.LauncherConstants;
 import org.firstinspires.ftc.teamcode.config.MatchConstants;
+import org.firstinspires.ftc.teamcode.config.VisionConstants;
 import org.firstinspires.ftc.teamcode.subsystems.ElementCounter;
 import org.firstinspires.ftc.teamcode.util.PoseStorage;
 import org.firstinspires.ftc.teamcode.subsystems.BallColor;
@@ -16,6 +17,18 @@ import org.junit.Test;
 
 /** Checks the pure TeleOp decisions: lights, volley size, ball-assist colors, endgame alerts. */
 public class TeleOpLogicTest {
+
+    @Test
+    public void ballAssistOnlyWhileDrivingForwardAndNotShooting() {
+        double forward = VisionConstants.BALL_ASSIST_MIN_FORWARD;
+        assertTrue(TeleOpLogic.shouldBallAssist(true, forward, 0.0, false));
+        assertFalse("standing still at the shooting spot",
+                TeleOpLogic.shouldBallAssist(true, 0.0, 0.0, false));
+        assertFalse("driving backward", TeleOpLogic.shouldBallAssist(true, -0.5, 0.0, false));
+        assertFalse("while firing", TeleOpLogic.shouldBallAssist(true, 0.8, 0.0, true));
+        assertFalse("driver is turning", TeleOpLogic.shouldBallAssist(true, 0.8, 0.2, false));
+        assertFalse("not collecting", TeleOpLogic.shouldBallAssist(false, 0.8, 0.0, false));
+    }
 
     @Test
     public void driverMovingWhenAnyAxisIsNotZero() {

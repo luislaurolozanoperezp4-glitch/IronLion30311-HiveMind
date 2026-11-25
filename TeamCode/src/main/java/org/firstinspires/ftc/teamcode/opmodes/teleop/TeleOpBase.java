@@ -1,4 +1,5 @@
 // Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/teleop/MainTeleOp.java @ a7b8f4c (button mapping, brake rumble, ball assist, align-while-firing, feed only when ready and aimed, jam rumble, low-battery rumble, light logic, shot marks, telemetry)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/teleop/MainTeleOp.java @ 023ae35 (ball assist only while driving forward) @ 854de85 (pollen idle spin toggle, off on low battery)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/mar/duopodriveNcam / TeamCode/.../PinpointOdometry.java @ 2d92fba (saved AUTO pose idea, via util.PoseStorage)
 //          — adapted for BIOBUZZ (iterative OpMode, subsystems + ShootingSequence, G407/G408/G410 wiring, endgame alerts, competition telemetry, match CSV log)
 package org.firstinspires.ftc.teamcode.opmodes.teleop;
@@ -69,7 +70,8 @@ public abstract class TeleOpBase extends OpMode {
     private static final String MATCH_LOG_FOLDER = "match_logs";
     private static final String MATCH_LOG_HEADER = "time_s,remaining_s,phase,battery_v,"
             + "pollen_target_rpm,pollen_rpm,nectar_target_rpm,nectar_rpm,pollen_shots,"
-            + "nectar_shots,intake,indexer,elements,auto_shoot,x_in,y_in,heading_deg,event";
+            + "nectar_shots,intake,indexer,elements,auto_shoot,x_in,y_in,heading_deg,intake_unjams,"
+            + "pollen_idle,event";
 
     /** How the last shot missed, marked by the operator for the log. */
     private enum ShotMark { SHORT, LONG, WIDE }
@@ -114,6 +116,7 @@ public abstract class TeleOpBase extends OpMode {
     private boolean wasStoppedForOpponentNectar = false;
     private boolean hasTarget = false;
     private boolean isFeedingNow = false;
+    private boolean isPollenIdleWanted = false;
     private final int[] markCounts = new int[ShotMark.values().length];
     private String pendingEvent = "";
     private double loopMillis = 0.0;
@@ -266,6 +269,8 @@ public abstract class TeleOpBase extends OpMode {
     public void start() {
         matchTimer.start();
         endgameAlerts.reset();
+        // POLLEN idle spin starts at START, never in INIT (G403: no powered movement before).
+        isPollenIdleWanted = LauncherConstants.POLLEN_IDLE_AT_START;
         // G407: start from what AUTO left on board; without AUTO the robot still holds its preload.
         elementCounter.setCount(TeleOpLogic.initialElementCount(
                 PoseStorage.getElementCount(-1)));
@@ -364,6 +369,12 @@ public abstract class TeleOpBase extends OpMode {
         if (driver.wasJustPressed(Button.B)) {
             toggleFlowerArm();
         }
+        if (operator.wasJustPressed(Button.RIGHT_STICK_BUTTON)) {
+            isPollenIdleWanted = !isPollenIdleWanted;
+            pendingEvent = isPollenIdleWanted ? "pollen_idle_on" : "pollen_idle_off";
+        }
+        // The idle spin also turns off while the battery is low.
+        launcher.setPollenIdle(isPollenIdleWanted && !battery.isLow());
         if (operator.wasJustPressed(Button.DPAD_UP)) {
             launcher.adjustPollenRpm(LauncherConstants.RPM_STEP);
         } else if (operator.wasJustPressed(Button.DPAD_DOWN)) {
@@ -446,8 +457,10 @@ public abstract class TeleOpBase extends OpMode {
             if (wasAligning) {
                 aligner.reset();
             }
-            // Ball assist: while collecting and not turning, turn toward the closest ball.
-            if (isCollect && turn == 0.0) {
+            // Ball assist: only while collecting AND driving forward onto balls, never while a
+            // launcher is used (it turned the robot on its own at the shooting spot).
+            boolean isUsingLauncher = isFiring || isReversePollen || isReverseNectar;
+            if (TeleOpLogic.shouldBallAssist(isCollect, forward, turn, isUsingLauncher)) {
                 turn = colorSensing.getAssistTurn(TeleOpLogic.assistColors(alliance));
             }
             if (isFieldCentric) {
@@ -584,7 +597,8 @@ public abstract class TeleOpBase extends OpMode {
                     intake.getState(), indexer.getState(), elementCounter.getCount(),
                     autoShoot.getState(),
                     pose == null ? "" : pose.x(), pose == null ? "" : pose.y(),
-                    pose == null ? "" : Math.toDegrees(pose.heading()), pendingEvent);
+                    pose == null ? "" : Math.toDegrees(pose.heading()), intake.getUnjamCount(),
+                    launcher.isPollenIdleEnabled() ? 1 : 0, pendingEvent);
             pendingEvent = "";
         }
         if (Double.isNaN(lastLogFlushSec)
@@ -637,6 +651,9 @@ public abstract class TeleOpBase extends OpMode {
     private void addCompetitionTelemetry() {
         telemetry.addData("POLLEN", "%.0f / %.0f RPM%s", launcher.getPollenRpm(),
                 launcher.getPollenTargetRpm(), launcher.isPollenReady() ? " READY" : "");
+        telemetry.addData("POLLEN idle", launcher.isPollenIdleEnabled()
+                ? "ON (gamepad2 RS button = off)"
+                : isPollenIdleWanted ? "OFF: battery low" : "OFF (gamepad2 RS button = on)");
         telemetry.addData("Elements", "%d / %d%s", elementCounter.getCount(),
                 MatchConstants.MAX_CONTROLLED_ELEMENTS,
                 intake.isFull() ? " FULL (gamepad1 X resets)" : "");
