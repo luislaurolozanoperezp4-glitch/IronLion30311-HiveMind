@@ -19,7 +19,7 @@ public class EndgameAlerts {
         NONE,
         /** 65 s left: get ready (short blips). */
         FIRST_WARNING,
-        /** 60 s left: ENDGAME starts, NECTAR and the flower arm are allowed (G410). */
+        /** 60 s left: ENDGAME starts, NECTAR and the FLOWER sweeper are allowed (G410). */
         ENDGAME_START
     }
 

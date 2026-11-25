@@ -2,6 +2,7 @@
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/BatteryMonitor.java @ a7b8f4c (battery limits)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/IndicatorLight.java @ a7b8f4c (light colors)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch master / TeamCode/.../RobotHardware.java @ 37b7a16 ("pinpoint", legacy "indexer", green light)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../RobotHardware.java @ 344254b (sweeperLeftServo, sweeperRightServo)
 //          — adapted for BIOBUZZ
 package org.firstinspires.ftc.teamcode.config;
 
@@ -62,11 +63,12 @@ public final class RobotConstants {
     public static final String PINPOINT = "pinpoint";
 
     /**
-     * Optional flower arm servos (branch feature/renata/flower-arm, decision D14: the team has
-     * not confirmed the arm is on the robot). If they are missing, FlowerArm does nothing.
+     * FLOWER sweeper servos: two mirrored goBILDA 2000-0025-0002 (Dual Mode, Torque, 300 deg)
+     * that lower and raise the bar that sweeps POLLEN off the FLOWERS. CONFIRMED on the robot
+     * branch (vision-align 344254b); optional: if they are missing, FlowerSweeper does nothing.
      */
-    public static final String FLOWER_ARM_LEFT_SERVO = "flowerArmLeftServo";
-    public static final String FLOWER_ARM_RIGHT_SERVO = "flowerArmRightServo";
+    public static final String SWEEPER_LEFT_SERVO = "sweeperLeftServo";
+    public static final String SWEEPER_RIGHT_SERVO = "sweeperRightServo";
 
     // ------------------------------------------------------------------------------------------
     // Legacy names: accepted as a fallback while a Control Hub still has the old configuration.
@@ -82,8 +84,13 @@ public final class RobotConstants {
     public static final String[] POLLEN_LAUNCHER_MOTOR_LEGACY = {"P"};
     public static final String[] NECTAR_LAUNCHER_MOTOR_LEGACY = {"N"};
     public static final String[] INDICATOR_LIGHT_LEGACY = {"indicator"};
-    public static final String[] FLOWER_ARM_LEFT_SERVO_LEGACY = {"servoLeft"};
-    public static final String[] FLOWER_ARM_RIGHT_SERVO_LEGACY = {"servoRight"};
+    /**
+     * Names the two FLOWER servos had on older configurations: the removed flower arm
+     * ({@code flowerArmLeftServo}, feature/renata/flower-arm {@code servoLeft}). Accepted so a hub
+     * that still uses them keeps working; rename them to the sweeper names.
+     */
+    public static final String[] SWEEPER_LEFT_SERVO_LEGACY = {"flowerArmLeftServo", "servoLeft"};
+    public static final String[] SWEEPER_RIGHT_SERVO_LEGACY = {"flowerArmRightServo", "servoRight"};
 
     // ------------------------------------------------------------------------------------------
     // Robot dimensions
