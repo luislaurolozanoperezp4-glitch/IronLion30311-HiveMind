@@ -1,4 +1,4 @@
-// Sources: docs/AUDIT_PEDRO.md section 7 and docs/BEST_OF_MATRIX.md section 4 (path list, flags) — new for IronLion30311-HiveMind
+// Sources: docs/AUDIT_PEDRO.md section 7 and docs/BEST_OF_MATRIX.md section 4 (path list, flags); Wait TIP routes from vision-align FarSideWaitTipAuto @ f26f8d0 — new for IronLion30311-HiveMind
 package org.firstinspires.ftc.teamcode.pathing.paths;
 
 import com.pedropathing.paths.Path;
@@ -117,6 +117,7 @@ public final class PathCatalog {
     private static final String VA = "IronLion30311BIOBUZZInicioDeTemporada feature/turrubiates/vision-align @ a7b8f4c";
     private static final String BETA = "IronLion30311BIOBUZZInicioDeTemporada feature/autonomos-beta @ 206fa84";
     private static final String NEW = "new (docs/BEST_OF_MATRIX.md section 4 row 23)";
+    private static final String VA_SYNC = "IronLion30311BIOBUZZInicioDeTemporada feature/turrubiates/vision-align @ f26f8d0";
 
     private static final List<Entry> ENTRIES = buildEntries();
 
@@ -252,6 +253,16 @@ public final class PathCatalog {
                 flags(Flag.WALL), false, true, a -> new OuterLanePaths(a).toPark()));
         list.add(new Entry("Outer Lane", OuterLanePaths.class, "toParkStraight", BETA, Use.CANDIDATE,
                 flags(Flag.WALL), true, true, a -> new OuterLanePaths(a).toParkStraight()));
+
+        // ---- Wait TIP (vision-align FarSideWaitTipAuto, UNTESTED) ----
+        list.add(new Entry("Wait TIP", WaitTipPaths.class, "leaveWall", VA_SYNC, Use.CANDIDATE,
+                flags(Flag.FLOWER), false, false, a -> new WaitTipPaths(a).leaveWall()));
+        list.add(new Entry("Wait TIP", WaitTipPaths.class, "leaveWallStraight", VA_SYNC, Use.CANDIDATE,
+                flags(Flag.FLOWER), true, false, a -> new WaitTipPaths(a).leaveWallStraight()));
+        list.add(new Entry("Wait TIP", WaitTipPaths.class, "park", VA_SYNC, Use.CANDIDATE,
+                flags(Flag.FLOWER), false, true, a -> new WaitTipPaths(a).park()));
+        list.add(new Entry("Wait TIP", WaitTipPaths.class, "parkStraight", VA_SYNC, Use.CANDIDATE,
+                flags(Flag.FLOWER), true, true, a -> new WaitTipPaths(a).parkStraight()));
 
         // ---- Safe Park (beta Park) ----
         list.add(new Entry("Safe Park", SafeParkPaths.class, "farStartToLoadingZone", BETA, Use.COMPETITION,

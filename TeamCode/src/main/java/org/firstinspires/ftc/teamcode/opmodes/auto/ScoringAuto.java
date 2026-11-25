@@ -62,10 +62,6 @@ import java.util.function.DoubleSupplier;
  */
 public abstract class ScoringAuto extends AutoBase {
 
-    /** Unit conversion (not a tuning value). */
-    private static final double CM_PER_INCH = 2.54;
-    private static final double CM_PER_METER = 100.0;
-
     private int cyclesDone;
     /** Bearing of our scoring cell at the first volley (the one that scores), degrees. */
     private double shootBearingDegrees = Double.NaN;
@@ -324,7 +320,8 @@ public abstract class ScoringAuto extends AutoBase {
 
     /** At the other-cell spot with the cell seen: Limelight aim, volley (park first), decide. */
     private List<AutoStep> otherCellVolleySteps(int balls) {
-        List<AutoStep> steps = aimSteps(HiveCell.getAudienceCell(getAlliance()));
+        List<AutoStep> steps = aimSteps(HiveCell.getAudienceCell(getAlliance()), getAimBearingDegrees(),
+                getAimDistanceMeters(), AutoConstants.AIM_MAX_TURN_DEGREES);
         steps.add(shoot("Other cell volley", balls, AutoConstants.OTHER_CELL_POLLEN_RPM,
                 volleyTimeLeft(otherSideParkWaypoints())));
         steps.add(AutoStep.instant("Decide after other volley", new Runnable() {
@@ -334,59 +331,6 @@ public abstract class ScoringAuto extends AutoBase {
             }
         }));
         return steps;
-    }
-
-    /**
-     * Limelight aim (vision-align 4fd2293 / f26f8d0, UNTESTED): turn, then move along the
-     * launcher axis, until {@code cell} is seen at the bearing and distance our scoring cell had at
-     * the first volley (the one that scores). Each step is skipped if the cell is not in view; the
-     * corrections are limited by the {@code AIM_*} constants.
-     */
-    private List<AutoStep> aimSteps(final HiveCell cell) {
-        return new ArrayList<>(Arrays.asList(
-                AutoStep.instant("Aim turn", new Runnable() {
-                    @Override
-                    public void run() {
-                        HiveClusterPose pose = getCellPose(cell);
-                        if (pose == null) {
-                            return;
-                        }
-                        double turnDegrees = aimTurnDegrees(bearingDegrees(pose), getAimBearingDegrees());
-                        if (Math.abs(turnDegrees) > AutoConstants.AIM_MIN_TURN_DEGREES) {
-                            getSequence().addNext(
-                                    turnTo(String.format(Locale.US, "Aim turn %.1f deg (bearing %.1f -> %.1f)",
-                                                    turnDegrees, bearingDegrees(pose), getAimBearingDegrees()),
-                                            getPose().heading() + Math.toRadians(turnDegrees), Mode.SPIN_UP),
-                                    settle(AutoConstants.SETTLE_SECONDS, Mode.SPIN_UP));
-                        }
-                    }
-                }),
-                AutoStep.instant("Aim distance", new Runnable() {
-                    @Override
-                    public void run() {
-                        HiveClusterPose pose = getCellPose(cell);
-                        if (pose == null) {
-                            return;
-                        }
-                        double moveCm = aimMoveCm(distanceMeters(pose), getAimDistanceMeters());
-                        if (Math.abs(moveCm) > AutoConstants.AIM_MIN_MOVE_CM) {
-                            getSequence().addNext(
-                                    driveTo(String.format(Locale.US, "Aim distance %.0f cm (%.2f -> %.2f m)",
-                                            moveCm, distanceMeters(pose), getAimDistanceMeters()),
-                                            movedTowardRear(getPose(), moveCm), Mode.SPIN_UP),
-                                    settle(AutoConstants.SETTLE_SECONDS, Mode.SPIN_UP));
-                        }
-                    }
-                }),
-                AutoStep.instant("Aim result", new Runnable() {
-                    @Override
-                    public void run() {
-                        HiveClusterPose pose = getCellPose(cell);
-                        getSequence().note(pose == null ? "Aim: cell out of view after aiming"
-                                : String.format(Locale.US, "Aim: bearing %.1f deg (target %.1f), distance %.2f m (target %.2f)",
-                                bearingDegrees(pose), getAimBearingDegrees(), distanceMeters(pose), getAimDistanceMeters()));
-                    }
-                })));
     }
 
     /** Far start, other cell not seen: down the west lane to the near spot and shoot there. */
@@ -479,53 +423,6 @@ public abstract class ScoringAuto extends AutoBase {
 
     private double getAimDistanceMeters() {
         return Double.isNaN(shootDistanceMeters) ? AutoConstants.DEFAULT_SHOOT_DISTANCE_METERS : shootDistanceMeters;
-    }
-
-    /**
-     * @param pose a cell's tag cluster in the camera frame
-     * @return its bearing from the camera axis, degrees (+ = right of the crosshair)
-     */
-    static double bearingDegrees(HiveClusterPose pose) {
-        return Math.toDegrees(Math.atan2(pose.strafeMeters, pose.forwardMeters));
-    }
-
-    /**
-     * @param pose a cell's tag cluster in the camera frame
-     * @return camera-to-cell floor distance, meters
-     */
-    static double distanceMeters(HiveClusterPose pose) {
-        return Math.hypot(pose.forwardMeters, pose.strafeMeters);
-    }
-
-    /**
-     * @param bearingDegrees       bearing of the cell now
-     * @param targetBearingDegrees bearing that scored
-     * @return the aim turn, degrees counter-clockwise, limited to {@code AIM_MAX_TURN_DEGREES}
-     */
-    static double aimTurnDegrees(double bearingDegrees, double targetBearingDegrees) {
-        double turn = AutoConstants.AIM_TURN_SIGN * (bearingDegrees - targetBearingDegrees);
-        return Math.max(-AutoConstants.AIM_MAX_TURN_DEGREES, Math.min(AutoConstants.AIM_MAX_TURN_DEGREES, turn));
-    }
-
-    /**
-     * @param distanceMeters       camera-to-cell distance now
-     * @param targetDistanceMeters distance that scored
-     * @return the move toward the cell, cm (negative = away from it, toward the FLOWER), limited
-     */
-    static double aimMoveCm(double distanceMeters, double targetDistanceMeters) {
-        double moveCm = (distanceMeters - targetDistanceMeters) * CM_PER_METER;
-        return Math.max(-AutoConstants.AIM_MAX_AWAY_CM, Math.min(AutoConstants.AIM_MAX_TOWARD_CM, moveCm));
-    }
-
-    /**
-     * @param pose   field pose of the robot
-     * @param moveCm distance to move toward the rear (the launcher and the Limelight face the cell)
-     * @return the field pose {@code moveCm} behind {@code pose}, same heading
-     */
-    static Pose movedTowardRear(Pose pose, double moveCm) {
-        double moveInches = moveCm / CM_PER_INCH;
-        return new Pose(pose.x() - Math.cos(pose.heading()) * moveInches,
-                pose.y() - Math.sin(pose.heading()) * moveInches, pose.heading());
     }
 
     /**

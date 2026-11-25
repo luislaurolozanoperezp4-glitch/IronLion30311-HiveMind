@@ -141,6 +141,39 @@ public final class AutoConstants {
     /** Most collect-and-shoot cycles after the preload (one 4-ball row per side). INFERRED. */
     public static int MAX_CYCLES = 1;
 
+    // ---------------- Wait-TIP auto (vision-align FarSideWaitTipAuto @ f26f8d0, UNTESTED) ----------------
+
+    /**
+     * Start x (center) at the back wall, right of the back-wall FLOWER. The source used 59.36
+     * (~0.3 in from the FLOWER); 61.5 keeps the 4 in FLOWER keep-out (G304.D check) and leaves
+     * 1.5 in to the territory line (G304.A). TODO: TUNE (place it on the field)
+     */
+    public static final double WAIT_TIP_START_X = 61.5;
+    /** Heading of the whole routine: front to the back wall, launchers toward the HIVE. */
+    public static final double WAIT_TIP_HEADING_DEG = 90.0;
+    /**
+     * PARK y in the UPPER part of the LOADING ZONE (robot y 112-130, 7.5 in inside the zone), so
+     * the partner fits at the zone's low edge. Source: 121. TODO: TUNE
+     */
+    public static final double WAIT_TIP_PARK_Y = 121.0;
+    /** POLLEN pre-spin while waiting for the TIP (a moderate idle). Source value. TODO: TUNE */
+    public static double WAIT_TIP_PRESPIN_RPM = 2000.0;
+    /** The cell counts as up and still after its tags are seen this long without moving. TODO: TUNE */
+    public static double WAIT_TIP_STABLE_SECONDS = 0.8;
+    /** ...with the camera-to-cell distance changing less than this, cm. TODO: TUNE */
+    public static double WAIT_TIP_STABLE_MAX_MOVE_CM = 3.0;
+    /** Time kept for aiming after the TIP. Source value. TODO: TUNE */
+    public static double WAIT_TIP_AIM_SECONDS = 2.0;
+    /** Shortest volley worth waiting for; the wait gives up before it no longer fits. TODO: TUNE */
+    public static double WAIT_TIP_MIN_SHOOT_SECONDS = 3.0;
+    /** A volley shorter than this is skipped (straight to park). Source: 1.0. */
+    public static double WAIT_TIP_MIN_VOLLEY_SECONDS = 1.0;
+    /**
+     * Largest aim turn here: at x 61.5 a robot turned more than ~9.6 deg reaches past the
+     * territory line (x 72) and the G402 guard would stop the drive for the rest of AUTO.
+     */
+    public static double WAIT_TIP_AIM_MAX_TURN_DEGREES = 9.0;
+
     // ---------------- Competition OpModes (opmodes/auto) ----------------
 
     /** Longest start delay the drive team can pick in INIT (alliance-partner coordination). */
