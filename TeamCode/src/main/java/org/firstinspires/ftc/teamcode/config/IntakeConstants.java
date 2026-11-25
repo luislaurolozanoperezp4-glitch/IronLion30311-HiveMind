@@ -1,6 +1,7 @@
 // Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/Intake.java @ a7b8f4c (power, ramp)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../RobotHardware.java @ a7b8f4c (direction, commit 927e4df)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PedroAutoBase.java @ a7b8f4c (shake, commit 7004eba)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/Intake.java @ b6913d9 (jam protection: JAM_CURRENT_AMPS, JAM_TIME_SEC, UNJAM_TIME_SEC)
 //          — adapted for BIOBUZZ
 package org.firstinspires.ftc.teamcode.config;
 
@@ -27,6 +28,24 @@ public final class IntakeConstants {
     public static double SHAKE_REVERSE_SECONDS = 0.35;
     public static double SHAKE_WAIT_SECONDS = 0.8;
     public static int SHAKE_MAX_TRIES = 3;
+
+    /**
+     * Jam protection (vision-align b6913d9): while collecting at speed, a motor current above
+     * this for {@link #JAM_SECONDS} means a ball is stuck. FITTED: in a 2026-11-24 TeleOp the
+     * intake motor stalled at 8.2 A (stall ~9.2 A) with two stall warnings. TODO: TUNE
+     */
+    public static double JAM_CURRENT_AMPS = 6.0;
+    /** How long the current must stay above {@link #JAM_CURRENT_AMPS}. TODO: TUNE */
+    public static double JAM_SECONDS = 0.4;
+    /** Reverse time of one unjam (the ramp needs ~0.23 s to reverse fully). TODO: TUNE */
+    public static double JAM_REVERSE_SECONDS = 0.4;
+    /**
+     * The current is only checked once the power is at least this fraction of
+     * {@link #COLLECT_POWER} (the start-up current spike is not a jam).
+     */
+    public static double JAM_MIN_POWER_FRACTION = 0.9;
+    /** Set false to turn the jam protection off (FTC Dashboard). */
+    public static boolean JAM_PROTECTION_ENABLED = true;
 
     /** Largest loop time used by the ramp, so the first loop after INIT does not jump. */
     public static final double RAMP_MAX_DT_SECONDS = 0.1;
