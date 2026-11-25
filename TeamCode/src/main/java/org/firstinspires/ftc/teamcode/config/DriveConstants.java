@@ -49,6 +49,8 @@ public final class DriveConstants {
     public static double SLOW_SPEED = 0.4;
     public static double FAST_SPEED = 1.0;
     public static double STICK_DEADZONE = 0.05;
+    /** Largest loop time used by the ramp, so a long first loop cannot skip the ramp. */
+    public static final double RAMP_MAX_DT_SECONDS = 0.05;
 
     // ---------------- Odometry driver for AUTO (TESTED in the 4/4 preload run) ----------------
     public static double AUTO_MAX_POWER = 0.85;

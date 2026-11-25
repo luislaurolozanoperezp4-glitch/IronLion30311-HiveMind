@@ -62,4 +62,16 @@ public final class LauncherConstants {
     // ---------------- Preload (TESTED) ----------------
     public static int PRELOAD_BALLS = 4;
     public static double SHOOT_MAX_SECONDS = 10.0;
+
+    // ---------------- Shot detection (TESTED, ShooterLogger on vision-align) ----------------
+    /** A shot starts when a firing flywheel falls this many RPM below its target. */
+    public static double SHOT_DIP_RPM = 200.0;
+    /** A shot ends (flywheel recovered) once it is back within this many RPM of the target. */
+    public static double SHOT_RECOVERED_RPM = 100.0;
+
+    // ---------------- Shooting sequence (TESTED in the 4/4 preload run) ----------------
+    /** After each shot, feeding stays stopped at least this long and until the RPM is back. */
+    public static double SHOT_PAUSE_MIN_SECONDS = 0.15;
+    /** Once a ball left, the volley ends if no other shot comes this long after the last one. */
+    public static double SHOOT_NO_SHOT_END_SECONDS = 3.0;
 }
