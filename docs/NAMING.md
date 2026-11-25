@@ -27,7 +27,7 @@ Every example below is a real name from this repository.
 | Kind | Rule | Examples |
 |---|---|---|
 | Class | `UpperCamelCase` noun, named after what it is | `Drivetrain`, `Launcher`, `ColorSensing`, `OdometryDriver` |
-| Subsystem | The mechanism's name, no `Subsystem` suffix | `Intake`, `Indexer`, `FlowerArm`, `Lights` |
+| Subsystem | The mechanism's name, no `Subsystem` suffix | `Intake`, `Indexer`, `FlowerSweeper`, `Lights` |
 | Interface | Noun or adjective, no `I` prefix | `Subsystem` |
 | Constants class | `<Mechanism>Constants`, in `config/` | `LauncherConstants`, `IntakeConstants`, `AutoConstants` |
 | State machine / sequence | `<Action>Sequence` or `<Thing>Watch` | `ShootingSequence`, `CollectSequence`, `TipWatch` |
@@ -53,7 +53,7 @@ Every example below is a real name from this repository.
 |---|---|
 | `lowerCamelCase` nouns | `drivetrain`, `launcher`, `shootDistanceMeters` |
 | Booleans start with `is`, `has`, `can`, `should`, `was` | `isFieldCentric`, `hasTarget`, `isAligning`, `wasAligning`, `shouldPause` |
-| Hardware fields match the Driver Station concept, plus the device type | `frontLeftDrive`, `intakeMotor`, `pollenLauncherMotor`, `indicatorLight`, `flowerArmLeftServo` |
+| Hardware fields match the Driver Station concept, plus the device type | `frontLeftDrive`, `intakeMotor`, `pollenLauncherMotor`, `indicatorLight`, `sweeperLeftServo` |
 | Values with a unit end with the unit | `startDelaySeconds`, `shootDistanceMeters`, `goneSec` (short form allowed for parameters) |
 | No one-letter names except loop counters and the standard `t` for `Telemetry` | `for (int i = 0; ...)`, `addTelemetry(Telemetry t)` |
 
@@ -97,7 +97,7 @@ the suffix; renaming these is a separate refactor (see `docs/agents/qa-ci.md` §
 
 | Rule | Examples |
 |---|---|
-| `lowerCamelCase`: position + function + device type | `frontLeftDrive`, `intakeMotor`, `indicatorLight`, `flowerArmLeftServo` |
+| `lowerCamelCase`: position + function + device type | `frontLeftDrive`, `intakeMotor`, `indicatorLight`, `sweeperLeftServo` |
 | Product name for a unique coprocessor or sensor | `limelight`, `huskyLens`, `pinpoint` |
 | No spaces, no nicknames, no single letters | not `imu 1`, not `alejandro`, not `P` |
 | Every name is written **once**, in `config/RobotConstants.java`. The README table copies it | `RobotConstants.POLLEN_LAUNCHER_MOTOR` |

@@ -16,7 +16,7 @@ Print this page for the pit. Tick every box. Strategy and the reasons behind eac
 - [ ] Motors: `frontLeftDrive`, `frontRightDrive`, `backLeftDrive`, `backRightDrive`,
       `intakeMotor`, `indexerMotor`, `pollenShooterMotor`, `nectarShooterMotor`.
 - [ ] Servo ports: `indicatorLight` (goBILDA RGB light). Optional: `nectarAlertLight`,
-      `flowerArmLeftServo`, `flowerArmRightServo` (only if the flower arm is mounted).
+      `sweeperLeftServo`, `sweeperRightServo` (FLOWER sweeper; calibrated with Tune Flower Sweeper).
 - [ ] I²C: `pinpoint` (goBILDA Pinpoint), `huskyLens` (HuskyLens).
 - [ ] USB: `limelight` (Limelight 3A).
 - [ ] Run **TeleOp Red** INIT: the telemetry lists missing devices. There must be none (or only
@@ -74,7 +74,7 @@ Print this page for the pit. Tick every box. Strategy and the reasons behind eac
 - [ ] TELEOP INIT: check the alliance and that the AUTO pose was handed over.
 - [ ] Driver 1: drive, collect (LB), drive away from opponent NECTAR when the intake stops.
 - [ ] Driver 2: fire (RT) or auto-volley (A); RPM ±50 with the D-pad if shots miss.
-- [ ] 1:05 three blips, 1:00 long rumble = ENDGAME. Flower arm (gamepad1 B) only now.
+- [ ] 1:05 three blips, 1:00 long rumble = ENDGAME. FLOWER sweeper down (gamepad1 B) only now.
 - [ ] Park partly in our LOADING ZONE before 0:00, then **press STOP** (G404).
 
 ## 4. After the match
@@ -104,7 +104,7 @@ Print this page for the pit. Tick every box. Strategy and the reasons behind eac
 | Intake stops near a NECTAR | G408 stop for opponent NECTAR (correct). If it happens with our own NECTAR, check the HuskyLens IDs | `ColorSensing`, `VisionConstants.HUSKY_*_ID` |
 | Robot drives the wrong way on one wheel | **Test Drive Wheels**; fix the direction in `DriveConstants` | `DriveConstants` |
 | Low battery banner / rumble | Swap the battery | `RobotConstants.BATTERY_*` |
-| Flower arm will not deploy | It is locked until 1:00 (G410); servos configured? | `FlowerArm`, `MatchTimer.canPlaceNectar` |
+| FLOWER sweeper will not go down | It is locked until 1:00 (`LOCK_DOWN_UNTIL_NECTAR_UNLOCK`); servos configured and calibrated? | `FlowerSweeper`, `FlowerSweeperConstants`, `MatchTimer.canPlaceNectar` |
 
 Change values from FTC Dashboard (http://192.168.43.1:8080/dash) to test them, then copy the
 value into the `config/` class and commit — Dashboard changes are lost when the app restarts.

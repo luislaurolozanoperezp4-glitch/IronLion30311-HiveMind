@@ -39,36 +39,38 @@ A layer may call the layers **below** it, never the ones above (a subsystem neve
 
 ## Package map
 
-Verified against the source tree on 2026-11-25 (96 main Java files plus 11 `package-info.java`, 35 test files).
+Verified against the source tree on 2026-11-25 after the source sync (102 main Java files plus 11 `package-info.java`, 37 test files).
 
 ```
 TeamCode/src/main/java/org/firstinspires/ftc/teamcode/
 ├── config/        RobotConstants (Driver Station names, size, battery, light colors),
 │                  DriveConstants, IntakeConstants, IndexerConstants, LauncherConstants,
-│                  FlowerArmConstants, VisionConstants, ControlConstants (gamepad feel, TeleOp
+│                  FlowerSweeperConstants, VisionConstants, ControlConstants (gamepad feel, TeleOp
 │                  options), AutoConstants (route legs, time budget), FieldConstants (BIOBUZZ
 │                  poses for RED), MatchConstants (match timing, rule limits), TuningConstants
 ├── hardware/      RobotHardware
 ├── subsystems/    Subsystem (interface), Drivetrain, Intake, Indexer, Launcher, ShotDetector,
-│   │              FlowerArm, ColorSensing, BallCounter, BallColor, ElementCounter, Vision,
+│   │              FlowerSweeper, ColorSensing, BallCounter, BallColor, ElementCounter, Vision,
 │   │              Lights, BatteryMonitor
 │   └── vision/    HiveVision, HiveAligner, HiveCell, HiveGeometry, HiveOrientation,
 │                  HiveStateTracker, HiveClusterPose (Limelight / HIVE AprilTags)
 ├── statemachine/  StateMachine, ShootingSequence, CollectSequence, TipWatch
-├── pathing/       PedroConstants, OdometryDriver, AutoPlanner, FieldDrawing, PoseLogger
+├── pathing/       PedroConstants, OdometryDriver, PinpointDiagnostics, AutoPlanner,
+│   │              FieldDrawing, PoseLogger
 │   ├── paths/     RoutePaths (base), NearRoutePoses, PreloadParkPaths, PreloadCollectPaths,
 │   │              OtherCellPaths, FarCyclePaths, SafeParkPaths, OuterLanePaths, TickPaths,
-│   │              CenterLanePaths, ShootCollectPaths, TestSquarePaths, PathCatalog
+│   │              CenterLanePaths, ShootCollectPaths, TestSquarePaths, WaitTipPaths, PathCatalog
 │   └── tuning/    Tuning (AutoTune @Tuner), MecanumTuner, PinpointTuner, ForesightTuner,
 │                  Tests (vendored Quickstart), TestPedroPose, TestOdometrySquare,
 │                  TestOdometryDriver
 ├── opmodes/
 │   ├── auto/      AutoBase, ScoringAuto, AutoRedNear, AutoBlueNear, AutoRedFar, AutoBlueFar,
 │   │              AutoSafePark, AutoSafeParkEncoders, AutoSelector, StartPosition, AutoStep,
-│   │              StepSequence, EmergencyPark, GuardedLeaveMove, TerritoryGuard
+│   │              StepSequence, EmergencyPark, GuardedLeaveMove, TerritoryGuard,
+│   │              WaitTipAuto, AutoRedWaitTip, AutoBlueWaitTip
 │   ├── teleop/    TeleOpBase, TeleOpRed, TeleOpBlue, TeleOpLogic, EndgameAlerts
 │   └── tuning/    TestDriveWheels, TestIndexerIntake, TuneColorSensor, TuneHiveVision,
-│                  TuneLauncherPidf
+│                  TuneLauncherPidf, TuneFlowerSweeper
 └── util/          Alliance, MatchTimer, GamepadEx, PidfController, SlewRateLimiter,
                    PoseStorage, DataLogger
 TeamCode/src/main/assets/images/biobuzz.webp   field image for FTC Dashboard
@@ -79,9 +81,10 @@ TeamCode/src/test/java/...   JUnit tests, same packages + testutil/ (FakeClock, 
 - Constants are split into one class per mechanism or topic instead of one big
   `RobotConstants`, so each file stays short.
 - `MatchConstants` holds the rule limits (4 elements for G407, last 60 s for G410, match timing).
-- The planned "Placer" became **`FlowerArm`**. It is the `feature/renata/flower-arm` class,
-  fixed so it compiles. Its servos are optional (decision D14 is still open: is the arm on the
-  robot?), and it can only deploy in the last 60 s (G410).
+- The planned "Placer" became **`FlowerArm`** (the `feature/renata/flower-arm` class), then the
+  source sync of 2026-11-25 replaced it with **`FlowerSweeper`**, the robot's real FLOWER
+  mechanism (vision-align 344254b). Lowering it is locked until the last 60 s while
+  `LOCK_DOWN_UNTIL_NECTAR_UNLOCK` is true. Its servos are optional (a missing servo = no-op).
 - `ColorSensing` uses the HuskyLens, because the robot has no REV color sensor.
 - `BatteryMonitor` lives in `subsystems/` (it has a `periodic()`), not in `util/`.
 - The Pedro follower factory is merged into `PedroConstants.createFollower(...)`.
@@ -120,7 +123,7 @@ public void loop() {
     operator.readButtons();
     if (localizer != null) localizer.update();   // Pinpoint pose (optional)
     handleMatchAlerts();                // endgame rumbles, low battery
-    handleToggles();                    // tap buttons: modes, RPM, shot marks, flower arm
+    handleToggles();                    // tap buttons: modes, RPM, shot marks, sweeper, idle spin
     handleDriveAndShooting();           // sticks, intake, launcher, auto-shoot
     colorSensing.countWhileIntaking(intake.isCollecting());
     lights.updateNectarAlert(closestNectarColor());

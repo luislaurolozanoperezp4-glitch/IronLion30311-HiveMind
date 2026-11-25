@@ -16,8 +16,10 @@ safety checks, and tuning tools.
 
 ## Status
 
-The code builds and all **216 JUnit tests pass**. Most mechanism values come from field tests of
-the old `vision-align` branch, but the new code itself has **not run on the robot yet**. Test
+The code builds and all **241 JUnit tests pass**. Most mechanism values come from field tests of
+the old `vision-align` branch, but the new code itself has **not run on the robot yet**. It is
+synced with the team's source repo up to `vision-align` @ `d93cec3` (= `master` `c98a668`,
+2026-11-24); per-commit decisions are in [`docs/SOURCE_SYNC.md`](docs/SOURCE_SYNC.md). Test
 these on the robot, in this order (collected from the agent hand-offs in `docs/agents/`):
 
 1. **Hardware config:** INIT any OpMode; telemetry must list no missing devices.
@@ -25,8 +27,11 @@ these on the robot, in this order (collected from the agent hand-offs in `docs/a
 2. **Test Odometry Driver** (Tuning): the ported point-to-point driver must repeat the tested
    near legs.
 3. **Auto Red Near**, delay 0: must match the 2026-11-23 run (4/4 preload, parked in ~12–14 s).
-   The last park leg changed from 60 to 56.5 cm so the robot ends 2 in off the wall:
-   **check it is still partly in the LOADING ZONE**. Check the planner line in the telemetry/CSV.
+   The last park leg changed from 60 to 56.5 cm so the robot ends 2 in off the wall, and the
+   long leg now ends at the LOADING ZONE's low edge (y 95.4, source sync 1e723f2):
+   **check it is still partly in the LOADING ZONE**. Check the planner and park-plan lines in the
+   telemetry/CSV. Then a collect cycle: the row is now collected along the audience wall, and the
+   other cell uses the angled spot and the Limelight aim (check `AIM_TURN_SIGN`).
 4. AUTO INIT: delay up/down, A re-zero; push the robot 5 cm (expect "will RE-ZERO") and 30 cm
    (expect FAULT). Unplug the Limelight: the near route must still shoot and park.
 5. Time guard: `Auto Red Near` with a 10 s delay must skip the cycle and park.
@@ -35,14 +40,19 @@ these on the robot, in this order (collected from the agent hand-offs in `docs/a
    Encoders**.
 8. **TeleOp Red:** same feel as the old `Main TeleOp`; loop time in DEBUG telemetry.
 9. gamepad2 **A** auto-volley with 1–4 balls; manual input cancels it.
-10. Endgame rumbles at 1:05 and 1:00; flower arm refused before 1:00.
+10. Endgame rumbles at 1:05 and 1:00; FLOWER sweeper lowering refused before 1:00. Calibrate the
+    sweeper first with **Tune Flower Sweeper**. POLLEN idle spin (2000 RPM) from START, toggled
+    by gamepad2 right stick button; first volley ready in ~0.7 s instead of 1.4–3 s.
 11. **G407:** collect 4 balls → intake stops (FULL); gamepad1 X resets. **G408:** opponent NECTAR
     in front of the intake → the intake **stops** (it must not push the ball).
 12. Field-centric (gamepad1 BACK); AUTO → TeleOp pose hand-off shown in INIT; match CSV saved.
 13. **Test Indexer Intake** (normal vs. jam current) and **Tune Launcher PIDF** (P 30 / F 15 still
     holds 3000 RPM).
-14. **Auto Red/Blue Far** only after the FAR start pose is confirmed (D21).
-15. Pedro **AutoTune** (Mecanum → Pinpoint → Foresight), then remove the 0.6 speed cap.
+14. **Auto Red/Blue Far** only after the FAR start pose is confirmed (D21). **Auto Red/Blue Wait
+    Tip** (back-wall start) with an alliance partner that TIPs first.
+15. Intake jam protection (6 A for 0.4 s → 0.4 s reverse) and the Pinpoint reboot recovery
+    (pose log `pinpoint_*` columns).
+16. Pedro **AutoTune** (Mecanum → Pinpoint → Foresight), then remove the 0.6 speed cap.
 
 Open team questions are listed in `docs/ROBOT_PROFILE.md` §0.3 and `docs/RULES_COMPLIANCE.md` §5.
 
@@ -69,8 +79,9 @@ Full details, sources and open questions: [`docs/ROBOT_PROFILE.md`](docs/ROBOT_P
 - **Rear:** two flywheel launchers (POLLEN about 3000 RPM, NECTAR 3600 RPM) and a Limelight 3A
   that reads the HIVE AprilTags (IDs 30–45).
 - **Lights:** a goBILDA RGB indicator light; an optional NECTAR alert light.
-- **Flower arm:** two optional servos; locked until the last 60 s (G410). Whether it is mounted
-  is not confirmed yet.
+- **FLOWER sweeper:** a bar on two mirrored goBILDA Dual Mode servos (300°) that sweeps POLLEN
+  off the FLOWERS (from `vision-align` 344254b). Lowering is locked until the last 60 s while
+  `FlowerSweeperConstants.LOCK_DOWN_UNTIL_NECTAR_UNLOCK` is true. Positions not calibrated yet.
 - **Scoring:** POLLEN into the up-facing HIVE cell; LEAVE and PARK in AUTO; PARK at the end.
 
 ## Versions
@@ -159,8 +170,8 @@ new drive names and `pinpoint`**, so use the new names. Hub/port numbers are not
 | `nectarShooterMotor` | Motor (DcMotorEx) | NECTAR launcher flywheel (REVERSE) | `N` | yes |
 | `indicatorLight` | Servo (goBILDA PWM RGB light) | Indicator light | `indicator` | yes |
 | `nectarAlertLight` | Servo (goBILDA PWM RGB light) | NECTAR alert light | — | optional |
-| `flowerArmLeftServo` | Servo | Flower arm, left (FORWARD) | `servoLeft` | optional |
-| `flowerArmRightServo` | Servo | Flower arm, right (REVERSE) | `servoRight` | optional |
+| `sweeperLeftServo` | Servo (goBILDA 2000-0025-0002, 500–2500 µs) | FLOWER sweeper, left | `flowerArmLeftServo`, `servoLeft` | optional |
+| `sweeperRightServo` | Servo (goBILDA 2000-0025-0002, 500–2500 µs) | FLOWER sweeper, right (mirrored) | `flowerArmRightServo`, `servoRight` | optional |
 | `pinpoint` | goBILDA Pinpoint (I²C) | Odometry + IMU (owned by Pedro) | — | yes for AUTO |
 | `huskyLens` | HuskyLens (I²C) | Ball color, front | — | optional |
 | `limelight` | Limelight 3A (USB) | HIVE AprilTags, rear | — | optional |
@@ -182,9 +193,9 @@ Checked against `opmodes/teleop/TeleOpBase.java`. Details and reasons: `docs/age
 | Right stick X | Turn |
 | LT (hold) | Brake (rumbles if you move the sticks while braking) |
 | A / Y | Slow mode / fast mode |
-| LB (hold) | Intake collect, with ball assist (turns toward the closest POLLEN or our NECTAR when you are not turning) |
+| LB (hold) | Intake collect, with ball assist (turns toward the closest POLLEN or our NECTAR only while you drive **forward** and do not turn, and never while a launcher is used) |
 | RB (hold) | Intake eject |
-| B (tap) | Flower arm deploy / retract. Deploy is refused (short rumble) before the last 60 s (G410) |
+| B (tap) | FLOWER sweeper down / up (slowed move). Lowering is refused (short rumble) before the last 60 s while `LOCK_DOWN_UNTIL_NECTAR_UNLOCK` is on |
 | X (tap) | Reset the element count to 0 (G407 counter override) |
 | BACK (tap) | Field-centric on/off (needs the Pinpoint). Turning it on makes the current heading "away from the driver" |
 
@@ -199,6 +210,7 @@ Checked against `opmodes/teleop/TeleOpBase.java`. Details and reasons: `docs/age
 | D-pad right / left | NECTAR target RPM +50 / −50 |
 | A (tap) | Auto-volley: spins up, feeds one ball per ready window, stops by itself. Tap again or touch any intake/launcher input to cancel |
 | X / Y / B (tap) | Mark the last shot SHORT / LONG / WIDE in the match log |
+| Right stick button (tap) | POLLEN idle spin off / on (2000 RPM between volleys; on at START, off while the battery is low) |
 | BACK (tap) | Switch COMPETITION / DEBUG telemetry |
 
 ### Automatic
@@ -207,9 +219,11 @@ Checked against `opmodes/teleop/TeleOpBase.java`. Details and reasons: `docs/age
 |---|---|
 | INIT | Light shows the alliance; missing devices, cameras, odometry and the AUTO pose hand-off are listed |
 | 1:05 left | Both gamepads: 3 short blips |
-| 1:00 left | Long rumble, `*** ENDGAME ***` banner, flower arm unlocked, idle light blinks |
+| START | POLLEN idle spin starts (never in INIT) |
+| 1:00 left | Long rumble, `*** ENDGAME ***` banner, FLOWER sweeper unlocked, idle light blinks |
 | Battery low | Both gamepads rumble once, banner |
 | Indexer jam | gamepad2 rumbles until fire is released |
+| Intake jam | More than 6 A for 0.4 s while collecting: the intake reverses 0.4 s, then collects again |
 | Robot full (4 elements, G407) | Collect refused, short rumble, telemetry "FULL (gamepad1 X resets)" |
 | Opponent NECTAR at the intake (G408) | The intake **stops** (never pushes it out), gamepad1 rumbles, banner. Drive away |
 | Firing with HIVE align enabled | Auto-align to our up cell (`VisionConstants.HIVE_ALIGN_ENABLED`, **off** by default) |
@@ -229,6 +243,8 @@ Every name below was checked against its `@TeleOp` / `@Autonomous` annotation.
 | **Auto Blue Near** | Autonomous | Competition | Same for BLUE (RED poses rotated 180°). Preselects TeleOp Blue |
 | **Auto Red Far** | Autonomous | Competition | Far start: drive north of the HIVE, shoot at the cell it sees, then cycle or park. **UNTESTED** (D21) |
 | **Auto Blue Far** | Autonomous | Competition | Same for BLUE. **UNTESTED** |
+| **Auto Red Wait Tip** | Autonomous | Competition | Back-wall start: LEAVE, pre-spin, wait for the partner's TIP (our audience cell up and still), Limelight aim, shoot 4, park in the upper LOADING ZONE. **UNTESTED** (source `FarSideWaitTipAuto`) |
+| **Auto Blue Wait Tip** | Autonomous | Competition | Same for BLUE. **UNTESTED** |
 | **Auto Safe Park** | Autonomous | Competition | LEAVE + PARK only, no shooting; start chosen in INIT. No TeleOp preselect |
 | **Auto Safe Park Encoders** | Autonomous | Competition | Wheel encoders only, 10 cm back: LEAVE only. For when the Pinpoint fails. No TeleOp preselect |
 | Test Drive Wheels | TeleOp | Tuning | LB/RB/LT/RT spin one wheel each, A all: checks ports, directions, encoder signs |
@@ -236,7 +252,8 @@ Every name below was checked against its `@TeleOp` / `@Autonomous` annotation.
 | Tune Color Sensor | TeleOp | Tuning | Show what the HuskyLens sees and how each block is classified |
 | Tune Hive Vision | TeleOp | Tuning | HIVE orientation signals per cell, labeled per-tag CSV, slow drive |
 | Tune Launcher PIDF | TeleOp | Tuning | Hold a flywheel RPM and tune the gains live (graph on FTC Dashboard) |
-| Test Pedro Pose | TeleOp | Tuning | Drive by hand and compare the odometry with the field tiles; A resets to the near start |
+| Tune Flower Sweeper | TeleOp | Tuning | Find the sweeper servos' UP / DOWN positions (left, right or both mirrored; coarse/fine steps) |
+| Test Pedro Pose | TeleOp | Tuning | Drive by hand and compare the odometry with the field tiles (plus Pinpoint status, Hz, pod counts); A resets to the near start |
 | Test Odometry Square | Autonomous | Tuning | One-tile square with Pedro paths (needs AutoTune first) |
 | Test Odometry Driver | Autonomous | Tuning | Drives the tested near legs with the odometry driver, no shooting. Run this first |
 
@@ -268,7 +285,7 @@ Connect the computer to the Control Hub's Wi-Fi, with the Robot Controller app r
 
 ## Tests and CI
 
-- **Unit tests** run on the computer: `./gradlew testDebugUnitTest` (216 tests). They cover the
+- **Unit tests** run on the computer: `./gradlew testDebugUnitTest` (241 tests). They cover the
   mechanisms' logic, the time planner, every path against the field rules, start-pose legality
   (G304) and the rule gates (G402, G407, G408, G410).
 - **Code rules:** `bash .github/scripts/check-code-rules.sh` (no `sleep()`, `// Sources:`
@@ -312,6 +329,8 @@ IronLion30311-HiveMind/
 | [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | How to contribute; how other teams can reuse the code |
 | [`docs/BRANCHING.md`](docs/BRANCHING.md) | Branches, pull requests, CI checks, event tags |
 | [`docs/MIGRATION.md`](docs/MIGRATION.md) | What came from which old branch, every rename |
+| [`docs/SOURCE_SYNC.md`](docs/SOURCE_SYNC.md) | Each new commit of the team's source repo: ported, partly ported or skipped, and why |
+| [`docs/research/SHOOTING_AND_TELEOP_RESEARCH.md`](docs/research/SHOOTING_AND_TELEOP_RESEARCH.md) | Shooting and TeleOp research (summary of the team's report) and what was implemented |
 | [`docs/BEST_OF_MATRIX.md`](docs/BEST_OF_MATRIX.md) | How the best version of each piece was chosen |
 | [`docs/AUDIT_MAIN.md`](docs/AUDIT_MAIN.md) · [`docs/AUDIT_PEDRO.md`](docs/AUDIT_PEDRO.md) | Audits of the old code and the Pedro work |
 | [`docs/agents/`](docs/agents) | Hand-off notes of each agent that built this repo |
