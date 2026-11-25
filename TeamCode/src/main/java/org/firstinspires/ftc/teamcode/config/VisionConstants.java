@@ -59,4 +59,22 @@ public final class VisionConstants {
     /** Turn assist toward a seen ball in TeleOp. TODO: TUNE */
     public static double BALL_ASSIST_KP = 0.35;
     public static double BALL_ASSIST_MAX_TURN = 0.3;
+    /** HuskyLens image size in pixels (fixed by the camera). */
+    public static final int HUSKY_IMAGE_WIDTH_PIXELS = 320;
+    public static final int HUSKY_IMAGE_HEIGHT_PIXELS = 240;
+
+    // ---------------- Ball counting (BallIntakeCounter on vision-align, in use) ----------------
+    /** A ball this far down the image (-1 top .. +1 bottom) is about to enter the intake. */
+    public static double BALL_NEAR_Y_OFFSET = 0.35;
+    /** The near ball must stay out of view this long to count as picked up. */
+    public static double BALL_LOST_CONFIRM_SECONDS = 0.15;
+    /** If the nearest ball jumps up the image by more than this, the near one went in. */
+    public static double BALL_NEXT_JUMP = 0.4;
+    /** Two pickups closer than this are the same ball seen twice. */
+    public static double BALL_MIN_PICKUP_INTERVAL_SECONDS = 0.25;
+    /**
+     * A NECTAR ball at least this far down the image counts as "at the intake" (G408 rejection
+     * and the NECTAR alert). TODO: TUNE
+     */
+    public static double INTAKE_ZONE_Y_OFFSET = 0.35;
 }

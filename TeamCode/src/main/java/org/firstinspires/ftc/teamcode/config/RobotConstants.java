@@ -61,6 +61,13 @@ public final class RobotConstants {
     /** goBILDA Pinpoint odometry computer (two 4-bar pods + IMU). Owned by Pedro Pathing. */
     public static final String PINPOINT = "pinpoint";
 
+    /**
+     * Optional flower arm servos (branch feature/renata/flower-arm, decision D14: the team has
+     * not confirmed the arm is on the robot). If they are missing, FlowerArm does nothing.
+     */
+    public static final String FLOWER_ARM_LEFT_SERVO = "flowerArmLeftServo";
+    public static final String FLOWER_ARM_RIGHT_SERVO = "flowerArmRightServo";
+
     // ------------------------------------------------------------------------------------------
     // Legacy names: accepted as a fallback while a Control Hub still has the old configuration.
     // Delete each one once every hub is renamed (decision D2, docs/BEST_OF_MATRIX.md section 6).
@@ -75,6 +82,8 @@ public final class RobotConstants {
     public static final String[] POLLEN_LAUNCHER_MOTOR_LEGACY = {"P"};
     public static final String[] NECTAR_LAUNCHER_MOTOR_LEGACY = {"N"};
     public static final String[] INDICATOR_LIGHT_LEGACY = {"indicator"};
+    public static final String[] FLOWER_ARM_LEFT_SERVO_LEGACY = {"servoLeft"};
+    public static final String[] FLOWER_ARM_RIGHT_SERVO_LEGACY = {"servoRight"};
 
     // ------------------------------------------------------------------------------------------
     // Robot dimensions
@@ -101,6 +110,10 @@ public final class RobotConstants {
     public static double BATTERY_SAG_HOLD_SECONDS = 0.5;
     /** Nominal voltage that feedforward gains are tuned at. */
     public static final double NOMINAL_VOLTS = 12.0;
+    /** Time between battery readings; each reading is an extra hub transaction. */
+    public static double BATTERY_READ_INTERVAL_SECONDS = 0.05;
+    /** Readings below this are sensor glitches (the hub reads 0 V when the OpMode stops). */
+    public static final double BATTERY_MIN_VALID_VOLTS = 3.0;
 
     // ------------------------------------------------------------------------------------------
     // Indicator light (goBILDA RGB light: servo position = color)
