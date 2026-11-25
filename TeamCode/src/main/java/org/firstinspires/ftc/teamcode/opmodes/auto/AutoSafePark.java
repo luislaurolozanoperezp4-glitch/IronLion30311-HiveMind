@@ -9,6 +9,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 import org.firstinspires.ftc.teamcode.config.AutoConstants;
 import org.firstinspires.ftc.teamcode.config.FieldConstants;
+import org.firstinspires.ftc.teamcode.pathing.DriveRoute;
 import org.firstinspires.ftc.teamcode.pathing.paths.NearRoutePoses;
 import org.firstinspires.ftc.teamcode.pathing.paths.PreloadParkPaths;
 import org.firstinspires.ftc.teamcode.pathing.paths.SafeParkPaths;
@@ -60,10 +61,10 @@ public class AutoSafePark extends AutoBase {
     protected void buildRoutine(StepSequence sequence) {
         switch (getStartPosition()) {
             case FAR:
-                sequence.addAll(parkSteps("Down the wall", Arrays.asList(field(SafeParkPaths.PARK)), false));
+                sequence.addAll(parkSteps(DriveRoute.SAFE_PARK, "Down the wall", Arrays.asList(field(SafeParkPaths.PARK)), false));
                 break;
             case LOADING_ZONE:
-                sequence.addAll(parkSteps("LEAVE + PARK", Arrays.asList(field(loadingZoneLeavePose()),
+                sequence.addAll(parkSteps(DriveRoute.SAFE_PARK, "LEAVE + PARK", Arrays.asList(field(loadingZoneLeavePose()),
                         field(loadingZoneParkPose())), true));
                 break;
             default:
@@ -71,7 +72,7 @@ public class AutoSafePark extends AutoBase {
                 steps.add(driveTo("LEAVE back " + AutoConstants.LEAVE_BACK_CM + " cm",
                         field(NearRoutePoses.SHOOT_SPOT), Mode.IDLE));
                 steps.add(settle(AutoConstants.SETTLE_SECONDS, Mode.IDLE));
-                steps.addAll(parkSteps("Park", new PreloadParkPaths(getAlliance()).getParkWaypoints(), true));
+                steps.addAll(parkSteps(DriveRoute.SAFE_PARK, "Park", new PreloadParkPaths(getAlliance()).getParkWaypoints(), true));
                 sequence.addAll(steps);
                 break;
         }

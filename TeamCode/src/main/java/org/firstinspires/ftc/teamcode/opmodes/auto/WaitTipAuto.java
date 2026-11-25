@@ -7,6 +7,7 @@ import com.pedropathing.math.Pose;
 import org.firstinspires.ftc.teamcode.config.AutoConstants;
 import org.firstinspires.ftc.teamcode.config.LauncherConstants;
 import org.firstinspires.ftc.teamcode.pathing.AutoPlanner;
+import org.firstinspires.ftc.teamcode.pathing.DriveRoute;
 import org.firstinspires.ftc.teamcode.pathing.paths.WaitTipPaths;
 import org.firstinspires.ftc.teamcode.subsystems.vision.HiveCell;
 
@@ -82,7 +83,7 @@ public abstract class WaitTipAuto extends AutoBase {
 
     /** @return the park legs from here, at the power that parks by the deadline */
     private List<AutoStep> parkSteps() {
-        return timedParkSteps("Park (upper zone)", Collections.singletonList(field(WaitTipPaths.PARK)), false);
+        return timedParkSteps(DriveRoute.WAIT_TIP_PARK, "Park (upper zone)", Collections.singletonList(field(WaitTipPaths.PARK)), false);
     }
 
     /** @return where the robot is, then PARK (for the time model) */
