@@ -37,17 +37,17 @@ public class HiveCellTest {
     public void tagsOutsideTheHiveRangeHaveNoCell() {
         assertNull(HiveCell.fromTagId(HiveCell.MIN_TAG_ID - 1));
         assertNull(HiveCell.fromTagId(HiveCell.MAX_TAG_ID + 1));
-        assertEquals(-1, HiveCell.RED_SCORING.indexOfTag(HiveCell.MAX_TAG_ID));
+        assertEquals(-1, HiveCell.RED_BACK.indexOfTag(HiveCell.MAX_TAG_ID));
     }
 
     @Test
-    public void eachAllianceHasAScoringAndAnAudienceCell() {
+    public void eachAllianceHasABackAndAnAudienceCell() {
         for (Alliance alliance : Alliance.values()) {
-            HiveCell scoring = HiveCell.getScoringCell(alliance);
+            HiveCell back = HiveCell.getBackCell(alliance);
             HiveCell audience = HiveCell.getAudienceCell(alliance);
-            assertEquals(alliance, scoring.getAlliance());
+            assertEquals(alliance, back.getAlliance());
             assertEquals(alliance, audience.getAlliance());
-            assertFalse(scoring == audience);
+            assertFalse(back == audience);
         }
     }
 
