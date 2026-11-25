@@ -52,7 +52,8 @@ these on the robot, in this order (collected from the agent hand-offs in `docs/a
     Tip** (back-wall start) with an alliance partner that TIPs first.
 15. Intake jam protection (6 A for 0.4 s → 0.4 s reverse) and the Pinpoint reboot recovery
     (pose log `pinpoint_*` columns).
-16. Pedro **AutoTune** (Mecanum → Pinpoint → Foresight), then remove the 0.6 speed cap.
+16. Pedro **AutoTune** (Mecanum → Pinpoint → Foresight), then remove the 0.6 speed cap, then switch
+    routes to Pedro one at a time with the hybrid switches (step-by-step: [`docs/PEDRO_TUNING.md`](docs/PEDRO_TUNING.md)).
 
 Open team questions are listed in `docs/ROBOT_PROFILE.md` §0.3 and `docs/RULES_COMPLIANCE.md` §5.
 
@@ -302,7 +303,7 @@ IronLion30311-HiveMind/
 │   ├── hardware/      RobotHardware: the only class that touches hardwareMap
 │   ├── subsystems/    one class per mechanism (+ vision/ for the HIVE AprilTags)
 │   ├── statemachine/  non-blocking sequences: shooting, collecting, TIP watch
-│   ├── pathing/       Pedro setup, odometry driver, time planner, paths/, tuning/
+│   ├── pathing/       Pedro setup, odometry driver, hybrid drive switch, time planner, paths/, tuning/
 │   ├── opmodes/       auto/, teleop/, tuning/ (what you pick on the Driver Station)
 │   └── util/          Alliance, MatchTimer, GamepadEx, PidfController, ...
 ├── TeamCode/src/main/assets/images/   field image for FTC Dashboard
@@ -321,6 +322,7 @@ IronLion30311-HiveMind/
 |---|---|
 | [`docs/CODE_GUIDE.md`](docs/CODE_GUIDE.md) | **Start here for the code:** every class in reading order, with diagrams |
 | [`docs/ROBOT_PROFILE.md`](docs/ROBOT_PROFILE.md) | The real robot, team decisions, open questions |
+| [`docs/PEDRO_TUNING.md`](docs/PEDRO_TUNING.md) | Pedro AutoTune step by step, and the hybrid drive switch (Pedro on long routes, odometry driver on precise moves) |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Layers, package map, rules |
 | [`docs/NAMING.md`](docs/NAMING.md) | Naming conventions with examples |
 | [`docs/STRATEGY.md`](docs/STRATEGY.md) | Match plan, AUTO choice, TeleOp cycle, endgame, ranking points |
