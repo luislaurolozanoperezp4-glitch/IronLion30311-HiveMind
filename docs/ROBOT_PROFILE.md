@@ -2,6 +2,85 @@
 
 Phase 0 output of the robot discovery agent, written 2026-11-24.
 Read-only study of every branch of the legacy repo and of the Pedro worktree copy.
+**Updated 2026-11-25** by the documentation agent: section 0 records the team decisions taken
+since Phase 1 and how the current HiveMind code matches the robot. Sections 1–12 are the
+original Phase 0 study of the *legacy* branches and are kept as history. Where they disagree
+with section 0, section 0 wins.
+
+## 0. Current status (2026-11-25)
+
+### 0.1 Team decisions (CONFIRMED)
+
+| # | Decision | Status | Where it shows in the code |
+|---|---|---|---|
+| D18 | Build on `feature/turrubiates/vision-align` (`VA`) as the base branch. | **CONFIRMED** | Every mechanism class starts from a `VA` file (see the `// Sources:` headers and `docs/MIGRATION.md`). |
+| D13 | The field is **180° rotationally symmetric** (not mirrored). Red is on the **left** seen from the audience (columns A–C). Poses are written for RED; BLUE = RED rotated 180° about the field center. | **CONFIRMED** (checked against the Competition Manual TU10, Fig. 9-2, 9-5, 10-2) | `util/Alliance.toField` / `rotate180`; `config/FieldConstants` Javadoc; `PathsTest.bluePathsAreRedRotated180` |
+| D20 | HIVE AprilTag layout: red **30–33 = back side** (opposite the audience), red **34–37 = audience side**, blue **38–41 = audience side**, blue **42–45 = back side**. | **CONFIRMED** (manual TU10 §9.9) | `subsystems/vision/HiveCell` (`RED_BACK`, `RED_AUDIENCE`, `BLUE_AUDIENCE`, `BLUE_BACK`); `FieldConstants.RED_BACK_CELL` / `RED_AUDIENCE_CELL` |
+| D21 | Team definition: the FAR start is "the wall farthest from our LOADING ZONE". | **CONFIRMED (definition only)**; the pose is still an open question (0.3, item 1) | `FieldConstants` Javadoc, `StartPosition.FAR` |
+| G408 | When opponent NECTAR is at the intake, the intake **stops**. It never pulls the ball in and never pushes it out (ejecting would itself be CONTROL). | **CONFIRMED** | `Intake` state `OPPONENT_NECTAR`, `IntakeConstants.STOP_FOR_OPPONENT_NECTAR`, `OPPONENT_NECTAR_HOLD_SECONDS` |
+| Park | Every competition park ends **at least 2 in off every wall** (so LEAVE counts) and partly inside the LOADING ZONE (PARK). | **CONFIRMED** | `FieldConstants.WALL_CLEARANCE_INCHES` = 2.0; `AutoConstants.RIGHT_2_CM` 60 → 56.5 |
+| Repo | The repository lives under a personal GitHub account for now; it moves to the team organization later. | **CONFIRMED** | `README.md` clone URL |
+
+### 0.2 What the current code assumes about the robot
+
+The HiveMind code (`TeamCode/`) matches the `VA` robot described in sections 1–7. Keep these
+points in mind:
+
+- **Driver Station names** are the `VA` names (`frontLeftDrive`, `intakeMotor`, `indexerMotor`,
+  `pollenShooterMotor`, `nectarShooterMotor`, `indicatorLight`, `limelight`, `huskyLens`,
+  `pinpoint`). `RobotHardware` also accepts the legacy names (`FL`, `intake`,
+  `alejandro`/`indexer`, `P`, `N`, `indicator`) as a fallback. Pedro Pathing (`PedroConstants`)
+  only knows the new drive names and `pinpoint`. Full table: `README.md` → Hardware configuration.
+- **FLOWER sweeper (replaces the flower arm, source sync 2026-11-25):** the robot's FLOWER
+  mechanism is a bar that sweeps POLLEN off the FLOWERS, on two mirrored goBILDA 2000-0025-0002
+  servos (CONFIRMED, `VA+` 344254b; see §0.4). `subsystems/FlowerSweeper`, servos
+  `sweeperLeftServo` / `sweeperRightServo` (optional). The flower arm class was removed (Q14
+  closed: no arm). Lowering is locked until the last 60 s while
+  `LOCK_DOWN_UNTIL_NECTAR_UNLOCK` is true (team policy, RULES_COMPLIANCE §5 question 1).
+- **Lights:** `indicatorLight` is expected; `nectarAlertLight` is optional (Q12).
+- **Intake** REVERSE, power 0.75. **Indexer** FORWARD, power 0.75, runs with either flywheel.
+  **Launcher** P 30 / I 0 / D 0 / F 15 at 12 V; POLLEN 3000 RPM in TeleOp and 2950 RPM in AUTO;
+  NECTAR 3600 RPM. These are the `VA` field-tested values (sections 4.1–4.3).
+- **Odometry:** Pinpoint, X pod FORWARD, Y pod REVERSED, offsets −6.79 / −0.72 in (FITTED, Q4).
+  Pedro follower gains are still placeholders with `MAX_PATH_SPEED` 0.6 (Q6). Competition autos
+  drive with `pathing/OdometryDriver` (the tested `VA` point-to-point driver), not Pedro paths.
+- **Robot size** used for rule checks: 18 × 18 in (Q16 still open; `VA+` 880cfaa says
+  "18 x 18 in, ~15 kg").
+
+### 0.4 Facts from the source sync (vision-align @ d93cec3, 2026-11-25)
+
+Mined from the 14 new `vision-align` commits and its `PROJECT_CONTEXT.md` / `doc/architecture.md`
+(`VA+` = `feature/turrubiates/vision-align` @ `d93cec3`, same tree as `master` `c98a668`).
+Per-commit decisions: `docs/SOURCE_SYNC.md`.
+
+| Fact | Status | Ref |
+|---|---|---|
+| FLOWER sweeper: bar that sweeps POLLEN off the FLOWERS, two goBILDA 2000-0025-0002 servos (Dual Mode, Torque, 300°) mounted as mirrors, DS names `sweeperLeftServo` / `sweeperRightServo`, PWM range 500–2500 µs (the hub default 600–2400 would give ~270°). UP/DOWN positions **not calibrated** yet. | CONFIRMED (hardware), positions TODO | `VA+:subsystems/FlowerSweeper.java`, `RobotHardware.java`, 344254b |
+| The POLLEN flywheel is ready 0.7 s after a fire command from ~2000 RPM, 1.4–3.0 s from a stop (2026-11-24 TeleOp). Idle spin costs ~1–1.5 A. | CONFIRMED (logs) | 854de85 |
+| With a ±100 RPM feed window, 6 of 72 logged shots left 57–79 RPM low and one +71 RPM high; readings come in ~43 RPM steps (28 CPR). Window now −50 / +80. | CONFIRMED (logs) | 19de992 |
+| The intake motor stalled at 8.2 A (stall ~9.2 A) with two stall warnings in a TeleOp. | CONFIRMED (logs) | b6913d9 |
+| The Pinpoint rebooted to (0, 0, 0) while the robot stood still shooting (battery 12.2 V, 120 ms loop gap): the park was lost. It also rebooted after wall hits / vibration, and once kept a bad state after a battery swap until a full power cycle. | CONFIRMED (logs) | 28ed859, 023ae35, 880cfaa |
+| Battery path resistance ~0.13 Ω (sag to 9–10 V at ~20 A); back-right wheel draws the most current. | CONFIRMED (team notes) | `VA+:PROJECT_CONTEXT.md` |
+| The HuskyLens sees a fixed yellow object: the ball assist turned the robot by itself at the shooting spot. | CONFIRMED | 023ae35 |
+| The 4 POLLEN of the near row lie against the audience wall at x ~1–13 in (they were 10 cm off it in the tests). | CONFIRMED (manual) | 4fd2293 |
+| Leg time model: 70 in/s per unit of power + 0.75 s per route + 0.55 s per leg (e.g. 35 + 70 in park in 3.6 s at 0.85). | FITTED (logs) | 1e723f2 |
+| Limelight: Full 3D AprilTag pipeline, 82.55 mm markers; the preload volley that scores sees our cell at bearing ~10.8° and ~1.22 m. | CONFIRMED / FITTED | `VA+:PROJECT_CONTEXT.md`, 4fd2293 |
+| The team's code treats our AUDIENCE cell (34–37) as DOWN at the start (the wait-TIP auto waits for it to come up). This disagrees with the manual figure (question 2 in §0.3). | OPEN | f26f8d0 |
+| The team's "far side" auto starts by the BACK wall next to the FLOWER (59.4, 132.1, 90° in a 141.5 in visualizer field). It is not the D21 FAR (wall farthest from our LOADING ZONE). | OPEN (D21) | f26f8d0 |
+| Untested on the robot per the team: south-wall collection, other-cell aim, park at power 1.0, far-side auto, idle spin, feed window, sweeper. | CONFIRMED (status) | `VA+:PROJECT_CONTEXT.md` |
+- **HIVE auto-align** in TeleOp is still off (`VisionConstants.HIVE_ALIGN_ENABLED = false`).
+
+### 0.3 Questions still open after the decisions
+
+1. **FAR start pose (D21).** `FieldConstants.FAR_START` (8.96, 131.19, 90°) sits on the red wall
+   right next to (behind) our LOADING ZONE. That is *not* "the wall farthest from our LOADING
+   ZONE". The Far autos still use it. The team's new `FarSideWaitTipAuto` (source sync) starts
+   at the BACK wall instead (`StartPosition.BACK_WALL`, Auto Wait Tip). Confirm the intended FAR
+   pose, or give the new one.
+2. **First target cell.** In the manual's setup (Fig. 10-2) the red AUDIENCE cell (34–37) starts
+   UP, but the tested routine aims first at the BACK cell (30–33). Check on a correctly set-up
+   field (`docs/RULES_COMPLIANCE.md` §5, question 2).
+3. Every question at the end of this file that is not marked CLOSED.
 
 ## How to read this file
 
@@ -17,7 +96,7 @@ Ref shorthand used below:
 |---|---|---|
 | `VA` | `origin/feature/turrubiates/vision-align` (a7b8f4c, 2026-11-24) | Newest. Tested on the real robot 2026-11-19 → 11-24 |
 | `MASTER` | `origin/master` (37b7a16, 2026-11-22) = merge of `feature/autonomos-beta` (206fa84) | Pedro autos checked in a path simulator only |
-| `WT` | `legacy/pedro-pathing-biobuzz-analysis-a65cc9` | Same files as 206fa84, plus one uncommitted change: `@Disabled` on `ShootTurnCollectAuto` (see `docs/snapshots/pedro-worktree-uncommitted.diff`) |
+| `WT` | `legacy/pedro-pathing-biobuzz-analysis-a65cc9` | Same files as 206fa84, plus one uncommitted change: `@Disabled` on `ShootTurnCollectAuto` (diff kept local, not committed) |
 | `NCAM` | `origin/feature/mar/duopodriveNcam` (2d92fba, 2026-11-21) | Mar's odometry + camera line (local copy c73454f, 11-19) |
 | `DUO` | `origin/feature/mar/duopodrive` (38caa7f, 2026-11-22) | Two pods, not calibrated |
 | `ONE` | `origin/feature/mar/onepodrive` (898e0da, 2026-11-11) | One pod only (Y pod broken at the time) |
@@ -411,6 +490,8 @@ Its names are already lowerCamelCase position+function. To avoid a third renamin
 
 ## QUESTIONS FOR THE TEAM
 
+Status on 2026-11-25: **CLOSED** = answered by a team decision (section 0.1). Every other question is still **OPEN**.
+
 1. **Hub and port map.** No branch records which Control Hub / Expansion Hub port each motor, servo and I2C device uses. Please send a photo or screenshot of the active Driver Station configuration, including the I2C bus for `pinpoint` and `huskyLens`.
 2. **Active DS names.** Which names does the robot's configuration use today: new (`frontLeftDrive`, `intakeMotor`, `indexerMotor`, `pollenShooterMotor`…) or legacy (`FL`, `intake`, `alejandro`, `P`…)? Is there more than one Control Hub or configuration file ("some Control Hubs still use the old configuration")?
 3. **Drive motors and wheels.** Please confirm 4× goBILDA 5203 312 RPM (19.2:1) with 104 mm GripForce wheels. Luis's early code assumed 435 RPM and 96 mm.
@@ -423,10 +504,14 @@ Its names are already lowerCamelCase position+function. To avoid a third renamin
 10. **Gate.** Is there any gate or stopper servo on the robot now? Were `pera` and `stopServo` the same servo?
 11. **HuskyLens IDs.** Which learned IDs are on the HuskyLens now: 2 = red / 3 = blue (`VA`) or 2 = blue / 3 = red (`Balls-counting`)?
 12. **Second light.** Is `nectarAlertLight` mounted and configured? Is the goBILDA Prism LED strip from `Balls-counting` on the robot?
-13. **Field frame and alliances.** Please confirm that the same autonomous path is used for both alliances (`VA`, d06ea2d) and that columns A–C (left from the audience) are red. `MASTER` mirrors its paths and calls the left half "blue".
-14. **Flower arm / placing.** Is Renata's flower arm (`servoLeft`/`servoRight`, 0 → 90°) on the robot? Is there any plan to place balls in FLOWERS/GARDENS, or is the robot POLLEN-shooting only this event?
+13. **CLOSED (D13, 2026-11-25): 180° rotation, red on the left, RED poses rotated for BLUE.** Original question: **Field frame and alliances.** Please confirm that the same autonomous path is used for both alliances (`VA`, d06ea2d) and that columns A–C (left from the audience) are red. `MASTER` mirrors its paths and calls the left half "blue".
+14. **Flower arm / placing.** **CLOSED (source sync 2026-11-25):** the robot has the FLOWER sweeper (vision-align 344254b), not the arm; placing NECTAR is still not planned. Original question: Is Renata's flower arm (`servoLeft`/`servoRight`, 0 → 90°) on the robot? Is there any plan to place balls in FLOWERS/GARDENS, or is the robot POLLEN-shooting only this event?
 15. **Naming style.** Please approve the §12 mapping. Do you keep the already adopted `…Drive` / `…ShooterMotor` names, or switch to shorter names (`frontLeft`, `pollenLauncher`)? The DS config must change to match.
 16. **Robot size.** Is the robot 18 × 18 in (`VA`), 17.83 × 16.54 in (`MASTER`), or 17.5 × 18 in (`NCAM`)? How tall is it? (`MASTER` paths drive under the central structure.)
 17. **Camera mount.** What are the measured Limelight pitch (code guesses 40°) and height? What is the tag spacing (0.1143 vs 0.0825 m)? Is "Full 3D" enabled on pipeline 0?
-18. **Which branch to build on.** Can the team confirm that `feature/turrubiates/vision-align` is what runs on the robot now? Should `master` (Luis's Pedro paths) and `feature/mar/duopodriveNcam` (Mar's field map / auto-aim) be merged into it or retired?
+18. **CLOSED (D18, 2026-11-25): build on `vision-align`.** Original question: **Which branch to build on.** Can the team confirm that `feature/turrubiates/vision-align` is what runs on the robot now? Should `master` (Luis's Pedro paths) and `feature/mar/duopodriveNcam` (Mar's field map / auto-aim) be merged into it or retired?
 19. **MXMOQ.** What is "MXMOQ" (event?), and which autonomous was run there?
+20. **CLOSED (D20, 2026-11-25): tag layout confirmed** (red 30–33 back side, 34–37 audience side; blue 38–41 audience side, 42–45 back side).
+21. **PARTLY CLOSED (D21, 2026-11-25):** FAR = "the wall farthest from our LOADING ZONE". **OPEN:** the pose in code does not match that definition (section 0.3).
+22. **CLOSED (G408, 2026-11-25):** the intake stops for opponent NECTAR and never ejects it.
+23. **CLOSED (parks, 2026-11-25):** every competition park ends at least 2 in off the wall.

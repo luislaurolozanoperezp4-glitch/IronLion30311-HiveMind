@@ -1,7 +1,7 @@
 # AUDIT_PEDRO — Pedro Pathing audit, FTC #30311 Iron Lion (BIOBUZZ 2026-27)
 
 Auditor: Pedro Pathing Auditor Agent · Date: 2026-11-24
-Sources (read-only): `legacy/pedro-pathing-biobuzz-analysis-a65cc9` (worktree copy of `feature/autonomos-beta` @ 206fa84 + uncommitted diff `docs/snapshots/pedro-worktree-uncommitted.diff`) and git history in `legacy/IronLion30311BIOBUZZInicioDeTemporada` (refs `origin/*`, `localcopy/*`).
+Sources (read-only): `legacy/pedro-pathing-biobuzz-analysis-a65cc9` (worktree copy of `feature/autonomos-beta` @ 206fa84 + one uncommitted change: the only uncommitted change was one `@Disabled` line on `ShootTurnCollectAuto`; the diff was kept local, not committed) and git history in `legacy/IronLion30311BIOBUZZInicioDeTemporada` (refs `origin/*`, `localcopy/*`).
 
 Conventions in this document:
 - **Pedro frame**: inches, origin bottom-left corner, X right, Y up, 144 x 144 in (the team's value; Pedro's own docs use a 141.5 in field, TO VERIFY), heading in degrees, counter-clockwise from +X.

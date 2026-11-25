@@ -59,7 +59,34 @@ git tag -a v1.0-qual-1 -m "Code used at Qualifier 1"
 git push origin v1.0-qual-1
 ```
 
-Tag names: `v1.0-qual-1`, `v1.1-qual-2`, `v2.0-state`.
+Tag names: `v<major>.<minor>[.<patch>]-<event>`.
+
+| Tag | When |
+|---|---|
+| `v1.0-qual-1` | Code used at Qualifier 1 |
+| `v1.0.1-qual-1` | A hotfix made during Qualifier 1 |
+| `v1.1-qual-2` | Code used at Qualifier 2 |
+| `v2.0-state` | Code used at the state/regional championship |
+
+Rules for tags:
+- Tag only commits on `main` that were run on the robot.
+- Always use annotated tags (`git tag -a`) with a one-line message.
+- Never move or delete a pushed tag; make a new patch tag instead.
+- The history also contains the FTC SDK's own tags (`v12.0`, …) from `upstream`. Our tags always
+  have an event suffix (`-qual-1`), so the two never clash.
+
+## CI checks on every push and pull request
+
+GitHub Actions runs `.github/workflows/build.yml` on every push and pull request to `main` and
+`dev`. It can also be started by hand (Actions tab → Build → Run workflow, or
+`gh workflow run build.yml --ref <branch>`). A pull request should only be merged when all
+checks are green.
+
+| Job | What it checks | How to run it on your computer |
+|---|---|---|
+| `build` | The app compiles (`assembleDebug`) and every JUnit test passes (`testDebugUnitTest`), on JDK 21. Test reports are uploaded as the `test-reports` artifact. | `./gradlew assembleDebug testDebugUnitTest` (Windows: `gradlew.bat ...`) |
+| `code-rules` | Fast grep checks (`.github/scripts/check-code-rules.sh`): no `sleep()` in TeleOp/AUTO/subsystems/state machines/util/hardware; every Java file starts with `// Sources:`; no `v2`/`_old`/`Final`/`Copy`/`Backup`/`Test2` file names; no common Spanish words; every OpMode has `group = "Competition"`, `"Tuning"` or `"Dev"`. | `bash .github/scripts/check-code-rules.sh` |
+| `branch-name` | Pull requests only: the branch name matches the format above (regex in `docs/NAMING.md` §10, max 30 characters). | — |
 
 ## Hotfix at an event
 

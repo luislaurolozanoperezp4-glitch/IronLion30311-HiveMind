@@ -1,6 +1,7 @@
 // Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/MecanumDrive.java @ a7b8f4c (ramps, speeds)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PedroAutoBase.java @ a7b8f4c (odometry driver, pose guards)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/SafeMoveAuto.java @ a7b8f4c (encoder ticks per cm)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PedroAutoBase.java @ 28ed859 (PINPOINT_RESET_MAX_RECOVERIES, reset signature)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch master / TeamCode/.../Constants.java @ 37b7a16 (motor ticks, wheel diameter)
 //          — adapted for BIOBUZZ
 package org.firstinspires.ftc.teamcode.config;
@@ -49,6 +50,8 @@ public final class DriveConstants {
     public static double SLOW_SPEED = 0.4;
     public static double FAST_SPEED = 1.0;
     public static double STICK_DEADZONE = 0.05;
+    /** Largest loop time used by the ramp, so a long first loop cannot skip the ramp. */
+    public static final double RAMP_MAX_DT_SECONDS = 0.05;
 
     // ---------------- Odometry driver for AUTO (TESTED in the 4/4 preload run) ----------------
     public static double AUTO_MAX_POWER = 0.85;
@@ -71,6 +74,13 @@ public final class DriveConstants {
     /** Drive timeout = base + distance / rate. */
     public static double DRIVE_TIMEOUT_BASE_SECONDS = 1.5;
     public static double DRIVE_TIMEOUT_INCHES_PER_SECOND = 20.0;
+    /**
+     * A pass-through leg hands its speed to the next leg only if that leg starts within this
+     * time. TESTED (VA PedroAutoBase.driveLeg: 0.15 s).
+     */
+    public static double AUTO_CARRIED_POWER_WINDOW_SECONDS = 0.15;
+    /** Longest loop time used by the power ramp, so one slow loop does not jump the power. TESTED. */
+    public static double AUTO_MAX_LOOP_SECONDS = 0.1;
 
     // ---------------- Odometry safety guards (TESTED) ----------------
     /** A pose jump bigger than this in one loop is treated as an odometry glitch. */
@@ -81,4 +91,17 @@ public final class DriveConstants {
     public static double START_HEADING_TOLERANCE_DEGREES = 5.0;
     public static double START_REZERO_MAX_INCHES = 12.0;
     public static double START_REZERO_MAX_DEGREES = 10.0;
+
+    /**
+     * Pinpoint reboot recovery (vision-align 28ed859): a pose jump to (0, 0, 0) is the Pinpoint
+     * rebooting (it happened while the robot stood still shooting, battery 12.2 V, 120 ms loop
+     * gap, and the park was lost). The last good pose is restored and the routine goes on, at
+     * most this many times per OpMode; any other jump still stops the drive. TODO: TUNE (the
+     * recovery has not run on the robot yet)
+     */
+    public static int PINPOINT_RESET_MAX_RECOVERIES = 3;
+    /** A pose this close to the origin (both x and y) can be a Pinpoint reboot. */
+    public static double PINPOINT_RESET_POSITION_INCHES = 0.5;
+    /** ...with a heading this close to 0. */
+    public static double PINPOINT_RESET_HEADING_DEGREES = 1.0;
 }
