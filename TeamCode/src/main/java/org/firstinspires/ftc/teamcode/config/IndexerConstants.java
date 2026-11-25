@@ -3,6 +3,7 @@
 package org.firstinspires.ftc.teamcode.config;
 
 import com.acmerobotics.dashboard.config.Config;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 /**
  * Indexer tuning values. The indexer motor (old name "alejandro") moves stored balls into the
@@ -14,6 +15,9 @@ public final class IndexerConstants {
 
     private IndexerConstants() {
     }
+
+    /** TESTED: positive power feeds balls toward the launchers. */
+    public static final DcMotorSimple.Direction DIRECTION = DcMotorSimple.Direction.FORWARD;
 
     /** TESTED: power used in every scored run. */
     public static double FEED_POWER = 0.75;
@@ -29,4 +33,8 @@ public final class IndexerConstants {
     public static double UNJAM_STEP_SECONDS = 0.2;
     public static int MAX_UNJAM_ATTEMPTS = 3;
     public static double JAM_RESET_SECONDS = 2.0;
+    /** Time between current readings; each reading is an extra hub transaction. */
+    public static double CURRENT_CHECK_INTERVAL_SECONDS = 0.05;
+    /** Largest loop time used by the ramp, so the first loop after INIT does not jump. */
+    public static final double RAMP_MAX_DT_SECONDS = 0.1;
 }
