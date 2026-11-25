@@ -73,6 +73,13 @@ public final class DriveConstants {
     /** Drive timeout = base + distance / rate. */
     public static double DRIVE_TIMEOUT_BASE_SECONDS = 1.5;
     public static double DRIVE_TIMEOUT_INCHES_PER_SECOND = 20.0;
+    /**
+     * A pass-through leg hands its speed to the next leg only if that leg starts within this
+     * time. TESTED (VA PedroAutoBase.driveLeg: 0.15 s).
+     */
+    public static double AUTO_CARRIED_POWER_WINDOW_SECONDS = 0.15;
+    /** Longest loop time used by the power ramp, so one slow loop does not jump the power. TESTED. */
+    public static double AUTO_MAX_LOOP_SECONDS = 0.1;
 
     // ---------------- Odometry safety guards (TESTED) ----------------
     /** A pose jump bigger than this in one loop is treated as an odometry glitch. */
