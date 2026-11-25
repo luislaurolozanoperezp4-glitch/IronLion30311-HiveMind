@@ -1,4 +1,4 @@
-// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PedroAutoBase.java @ a7b8f4c (driveTo, driveThrough, driveLeg, turnTo, settle, holdTarget, holdStep, checkOdometry, startPoseErrorIn, startHeadingErrorDeg, driveRobotCentric)
+// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PedroAutoBase.java @ a7b8f4c (driveTo, driveThrough, driveLeg, turnTo, settle, holdTarget, holdStep, checkOdometry, startPoseErrorIn, startHeadingErrorDeg, driveRobotCentric) @ 28ed859 (Pinpoint reboot recovery in checkOdometry)
 //          — adapted for BIOBUZZ (blocking while-loops turned into a non-blocking step API)
 package org.firstinspires.ftc.teamcode.pathing;
 
@@ -31,9 +31,12 @@ import java.util.Locale;
  * <p>
  * <b>Safety guards</b> (all TESTED on the robot):
  * <ul>
- *     <li>Pose jump: if the pose moves more than {@code POSE_JUMP_LIMIT_*} in one loop, the
- *     odometry is lost (for example the Pinpoint rebooted to (0, 0, 0) after a hit). From then
- *     on the driver only commands zero power, for the rest of the OpMode.</li>
+ *     <li>Pinpoint reboot: a jump to exactly (0, 0, 0) is the Pinpoint rebooting. The last good
+ *     pose is written back and the move goes on, up to
+ *     {@code PINPOINT_RESET_MAX_RECOVERIES} times (vision-align 28ed859).</li>
+ *     <li>Pose jump: any other move of more than {@code POSE_JUMP_LIMIT_*} in one loop means
+ *     the odometry is lost. From then on the driver only commands zero power, for the rest of
+ *     the OpMode.</li>
  *     <li>Start pose: {@link #checkStartPose(Pose)} re-zeroes a small error (the robot was moved
  *     after INIT) and refuses to drive with a large one (a pod read 5 m off before moving).</li>
  *     <li>Every leg and turn has a timeout.</li>
@@ -125,6 +128,10 @@ public class OdometryDriver {
     private boolean isOdometryLost;
     private boolean isGuardArmed;
     private Pose lastPose;
+    private Pose currentPose;
+    private boolean isPoseFresh;
+    private int resetRecoveries;
+    private String lastRecoveryText = "";
 
     /**
      * @param base  the robot drive (use {@link #fromFollower(Follower)} on the robot)
@@ -282,7 +289,32 @@ public class OdometryDriver {
     }
 
     /**
-     * Runs one control step. Call it once per loop, after {@code follower.update()}.
+     * Reads the pose and runs the guards (Pinpoint reboot recovery, pose jump). Call it once per
+     * loop after {@code follower.update()} when the OpMode needs the checked pose before
+     * {@link #periodic()} (for example for its own guards); {@link #periodic()} then reuses it.
+     *
+     * @return the pose to use this loop (the restored pose after a recovered Pinpoint reboot)
+     */
+    public Pose updatePose() {
+        currentPose = checkPoseJump(base.getPose());
+        isPoseFresh = true;
+        return currentPose;
+    }
+
+    /**
+     * Stops the drive for good because the odometry cannot be trusted (for example the Pinpoint
+     * reports a fault at START). Mechanisms are not affected.
+     *
+     * @param reason one line for the logs
+     */
+    public void lockOdometry(String reason) {
+        isOdometryLost = true;
+        resultText = "ODOMETRY LOCKED: " + reason;
+    }
+
+    /**
+     * Runs one control step. Call it once per loop, after {@code follower.update()} (and after
+     * {@link #updatePose()} if the OpMode calls it).
      */
     public void periodic() {
         double now = clock.nowSeconds();
@@ -290,8 +322,8 @@ public class OdometryDriver {
                 : Math.min(now - lastLoopSeconds, DriveConstants.AUTO_MAX_LOOP_SECONDS);
         lastLoopSeconds = now;
 
-        Pose pose = base.getPose();
-        checkPoseJump(pose);
+        Pose pose = isPoseFresh ? currentPose : updatePose();
+        isPoseFresh = false;
         if (isOdometryLost) {
             base.drive(0.0, 0.0, 0.0);
             if (state != State.IDLE) {
@@ -354,6 +386,16 @@ public class OdometryDriver {
     /** @return true once the odometry was found lost; the driver no longer moves the robot */
     public boolean isOdometryLost() {
         return isOdometryLost;
+    }
+
+    /** @return how many Pinpoint reboots were recovered (pose restored) since the start */
+    public int getResetRecoveries() {
+        return resetRecoveries;
+    }
+
+    /** @return the log line of the last recovered Pinpoint reboot, or "" */
+    public String getLastRecoveryText() {
+        return lastRecoveryText;
     }
 
     /** @return seconds since the current (or last) move started */
@@ -494,18 +536,32 @@ public class OdometryDriver {
     }
 
     /**
-     * Marks the odometry as lost when the pose jumps more than the robot can move in one loop.
+     * Checks every pose read for jumps the robot cannot make in one loop. A jump to (0, 0, 0) is
+     * a Pinpoint reboot: the last good pose is written back (up to
+     * {@code PINPOINT_RESET_MAX_RECOVERIES} times). Any other jump marks the odometry as lost.
+     *
+     * @return the pose to use (the restored one after a recovered reboot)
      */
-    private void checkPoseJump(Pose pose) {
+    private Pose checkPoseJump(Pose pose) {
         if (!isGuardArmed || isOdometryLost) {
             lastPose = pose;
-            return;
+            return pose;
         }
         if (lastPose != null) {
             double jumpInches = distance(pose, lastPose);
             double jumpDegrees = Math.abs(Math.toDegrees(angleError(pose.heading(), lastPose.heading())));
-            if (jumpInches > DriveConstants.POSE_JUMP_LIMIT_INCHES
-                    || jumpDegrees > DriveConstants.POSE_JUMP_LIMIT_DEGREES) {
+            boolean isJump = jumpInches > DriveConstants.POSE_JUMP_LIMIT_INCHES
+                    || jumpDegrees > DriveConstants.POSE_JUMP_LIMIT_DEGREES;
+            if (isJump && isPinpointResetPose(pose)
+                    && resetRecoveries < DriveConstants.PINPOINT_RESET_MAX_RECOVERIES) {
+                resetRecoveries++;
+                base.setPose(lastPose);
+                lastRecoveryText = String.format(Locale.US,
+                        "PINPOINT RESET recovered (%d): pose restored to (%.1f, %.1f, %.0f deg)",
+                        resetRecoveries, lastPose.x(), lastPose.y(), Math.toDegrees(lastPose.heading()));
+                return lastPose;
+            }
+            if (isJump) {
                 isOdometryLost = true;
                 resultText = String.format(Locale.US,
                         "ODOMETRY LOST: pose jumped %.1f in / %.0f deg; drive stopped",
@@ -513,6 +569,18 @@ public class OdometryDriver {
             }
         }
         lastPose = pose;
+        return pose;
+    }
+
+    /**
+     * @param pose a pose read from the odometry
+     * @return true if it looks like a Pinpoint that rebooted: (0, 0) with heading 0
+     */
+    public static boolean isPinpointResetPose(Pose pose) {
+        return Math.abs(pose.x()) < DriveConstants.PINPOINT_RESET_POSITION_INCHES
+                && Math.abs(pose.y()) < DriveConstants.PINPOINT_RESET_POSITION_INCHES
+                && Math.abs(Math.toDegrees(angleError(pose.heading(), 0.0)))
+                < DriveConstants.PINPOINT_RESET_HEADING_DEGREES;
     }
 
     // ------------------------------------------------------------------------------------------

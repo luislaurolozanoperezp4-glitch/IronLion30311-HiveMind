@@ -1,5 +1,6 @@
 // Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../RobotHardware.java @ a7b8f4c (constructor, getDevice with legacy names, motor setup, optional cameras)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch master / TeamCode/.../RobotHardware.java @ 37b7a16 (pinpoint lookup)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/pathing/PinpointDiagnostics.java @ 023ae35 (Pinpoint device kept for the health read)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/renata/flower-arm / TeamCode/.../RobotHardware.java @ 889102d (flower arm servos)
 //          — adapted for BIOBUZZ (fault tolerant: missing devices give warnings, MANUAL bulk caching)
 package org.firstinspires.ftc.teamcode.hardware;
@@ -72,6 +73,11 @@ public class RobotHardware {
     public final Limelight3A limelight;
     /** HuskyLens on the front (intake side), for POLLEN and NECTAR by color. */
     public final HuskyLens huskyLens;
+    /**
+     * goBILDA Pinpoint, or null. Pedro Pathing owns it (pose); only
+     * {@code pathing.PinpointDiagnostics} reads its status here. Never set its pose from here.
+     */
+    public final GoBildaPinpointDriver pinpoint;
 
     private final HardwareMap hardwareMap;
     private final List<LynxModule> hubs;
@@ -143,7 +149,8 @@ public class RobotHardware {
         huskyLens = getDevice(HuskyLens.class, RobotConstants.HUSKY_LENS);
 
         // Pedro Pathing owns the Pinpoint; here we only check that it is configured.
-        hasPinpoint = hardwareMap.tryGet(GoBildaPinpointDriver.class, RobotConstants.PINPOINT) != null;
+        pinpoint = tryGet(GoBildaPinpointDriver.class, RobotConstants.PINPOINT);
+        hasPinpoint = pinpoint != null;
         if (!hasPinpoint) {
             warnings.add("Missing pinpoint \"" + RobotConstants.PINPOINT + "\" (odometry)");
         }

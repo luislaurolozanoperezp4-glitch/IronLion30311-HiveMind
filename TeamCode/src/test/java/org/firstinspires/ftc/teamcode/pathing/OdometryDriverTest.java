@@ -1,4 +1,4 @@
-// Sources: new for IronLion30311-HiveMind (simulated tests of the ported vision-align odometry driver)
+// Sources: new for IronLion30311-HiveMind (simulated tests of the ported vision-align odometry driver, incl. the Pinpoint reboot recovery @ 28ed859)
 package org.firstinspires.ftc.teamcode.pathing;
 
 import static org.junit.Assert.assertEquals;
@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.pedropathing.math.Pose;
 
+import org.firstinspires.ftc.teamcode.config.DriveConstants;
 import org.firstinspires.ftc.teamcode.pathing.paths.NearRoutePoses;
 import org.firstinspires.ftc.teamcode.util.MatchTimer;
 import org.junit.Test;
@@ -126,7 +127,7 @@ public class OdometryDriverTest {
         driver.checkStartPose(NearRoutePoses.START);
         driver.driveTo(NearRoutePoses.PARK);
         driver.periodic();
-        robot.pose = new Pose(0.0, 0.0, 0.0); // Pinpoint reboot
+        robot.pose = new Pose(30.0, 40.0, 1.0); // a jump that is not a Pinpoint reboot
         driver.periodic();
         assertTrue(driver.isOdometryLost());
         assertEquals(OdometryDriver.Result.ODOMETRY_LOST, driver.getResult());
@@ -135,6 +136,60 @@ public class OdometryDriverTest {
         driver.periodic();
         assertEquals(0.0, robot.forward, 0.0);
         assertEquals(0.0, robot.strafe, 0.0);
+    }
+
+    @Test
+    public void recoversAPinpointRebootByRestoringTheLastPose() {
+        SimRobot robot = new SimRobot(NearRoutePoses.START);
+        OdometryDriver driver = new OdometryDriver(robot, clock);
+        driver.checkStartPose(NearRoutePoses.START);
+        driver.driveTo(NearRoutePoses.SHOOT_SPOT);
+        driver.periodic();
+        Pose before = robot.pose;
+        robot.pose = new Pose(0.0, 0.0, 0.0); // Pinpoint rebooted to its origin
+        assertEquals(0.0, OdometryDriver.distance(before, driver.updatePose()), 1e-9);
+        driver.periodic();
+        assertFalse(driver.isOdometryLost());
+        assertEquals(1, driver.getResetRecoveries());
+        assertEquals("the pose was written back", 0.0, OdometryDriver.distance(before, robot.pose), 1e-9);
+        run(driver, robot, 5.0);
+        assertEquals(0.0, OdometryDriver.distance(robot.pose, NearRoutePoses.SHOOT_SPOT), 1.0);
+    }
+
+    @Test
+    public void givesUpAfterTooManyPinpointReboots() {
+        SimRobot robot = new SimRobot(NearRoutePoses.START);
+        OdometryDriver driver = new OdometryDriver(robot, clock);
+        driver.checkStartPose(NearRoutePoses.START);
+        for (int i = 0; i < DriveConstants.PINPOINT_RESET_MAX_RECOVERIES; i++) {
+            robot.pose = new Pose(0.0, 0.0, 0.0);
+            driver.periodic();
+            assertFalse(driver.isOdometryLost());
+        }
+        robot.pose = new Pose(0.0, 0.0, 0.0);
+        driver.periodic();
+        assertTrue(driver.isOdometryLost());
+        assertEquals(DriveConstants.PINPOINT_RESET_MAX_RECOVERIES, driver.getResetRecoveries());
+    }
+
+    @Test
+    public void lockOdometryStopsTheDrive() {
+        SimRobot robot = new SimRobot(NearRoutePoses.START);
+        OdometryDriver driver = new OdometryDriver(robot, clock);
+        driver.checkStartPose(NearRoutePoses.START);
+        driver.lockOdometry("Pinpoint fault at START");
+        driver.driveTo(NearRoutePoses.SHOOT_SPOT);
+        driver.periodic();
+        assertEquals(OdometryDriver.Result.ODOMETRY_LOST, driver.getResult());
+        assertEquals(0.0, robot.forward, 0.0);
+    }
+
+    @Test
+    public void resetSignatureIsOnlyTheOrigin() {
+        assertTrue(OdometryDriver.isPinpointResetPose(new Pose(0.0, 0.0, 0.0)));
+        assertTrue(OdometryDriver.isPinpointResetPose(new Pose(0.1, -0.2, Math.toRadians(0.5))));
+        assertFalse(OdometryDriver.isPinpointResetPose(new Pose(0.0, 0.0, Math.toRadians(90.0))));
+        assertFalse(OdometryDriver.isPinpointResetPose(new Pose(5.0, 0.0, 0.0)));
     }
 
     @Test

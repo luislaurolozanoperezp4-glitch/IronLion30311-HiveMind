@@ -1,4 +1,5 @@
 // Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PedroAutoBase.java @ a7b8f4c (runOpMode: INIT alliance choice, A = re-zero, start-pose check, logs, stopAll; driveTo/settle/turnTo/holdTarget/lookForCell/watchForTip/shootPollenPreload helpers; applyMechanisms modes)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PedroAutoBase.java @ 28ed859 (Pinpoint reboot recovery log) @ 023ae35 (Pinpoint health: INIT warning, fault at START stops the drive, log columns, summary)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/auto-leave-park / TeamCode/.../opmodes/auto/LeaveParkAuto.java @ e455142 (start delay)
 //          — adapted for BIOBUZZ (iterative OpMode, non-blocking steps, time-aware park, G402/G407/G408 guards)
 package org.firstinspires.ftc.teamcode.opmodes.auto;
@@ -15,6 +16,7 @@ import org.firstinspires.ftc.teamcode.pathing.AutoPlanner;
 import org.firstinspires.ftc.teamcode.pathing.FieldDrawing;
 import org.firstinspires.ftc.teamcode.pathing.OdometryDriver;
 import org.firstinspires.ftc.teamcode.pathing.PedroConstants;
+import org.firstinspires.ftc.teamcode.pathing.PinpointDiagnostics;
 import org.firstinspires.ftc.teamcode.pathing.PoseLogger;
 import org.firstinspires.ftc.teamcode.statemachine.ShootingSequence;
 import org.firstinspires.ftc.teamcode.statemachine.TipWatch;
@@ -59,6 +61,9 @@ import java.util.function.DoubleSupplier;
  * <p>
  * <b>Guards</b>:
  * <ul>
+ *     <li>Odometry: a Pinpoint reboot (pose jump to (0, 0, 0)) is recovered by
+ *     {@link OdometryDriver}; any other jump, or a Pinpoint fault at START
+ *     ({@link PinpointDiagnostics}), stops the drive for the rest of AUTO.</li>
  *     <li>Time: when the park from here (see {@link EmergencyPark}) no longer fits before the
  *     end of AUTO with {@code AUTO_PARK_RESERVE_SECONDS} spare, the current step is cancelled,
  *     the mechanisms stop and the robot parks.</li>
@@ -117,6 +122,8 @@ public abstract class AutoBase extends OpMode {
 
     private Follower follower;
     private OdometryDriver driver;
+    private PinpointDiagnostics pinpointDiagnostics;
+    private int loggedRecoveries;
     private String followerError = "";
 
     private AutoSelector selector;
@@ -190,6 +197,8 @@ public abstract class AutoBase extends OpMode {
         });
         shooting = ShootingSequence.forRobot(launcher, indexer, intake);
         tipWatch = TipWatch.forVision(vision);
+        pinpointDiagnostics = new PinpointDiagnostics(hardware.pinpoint);
+        poseLogger.setPinpointDiagnostics(pinpointDiagnostics);
 
         try {
             follower = PedroConstants.createFollower(hardwareMap);
@@ -230,6 +239,7 @@ public abstract class AutoBase extends OpMode {
         if (follower != null) {
             follower.update();
         }
+        pinpointDiagnostics.update();
         vision.periodic();
         lights.periodic();
         battery.periodic();
@@ -239,6 +249,11 @@ public abstract class AutoBase extends OpMode {
         telemetry.addData("Selected", selector.getSummary());
         telemetry.addData("Controls", selector.getControlsText());
         telemetry.addData("Odometry", describeStartPose());
+        telemetry.addData("Pinpoint", pinpointDiagnostics.summary());
+        if (pinpointDiagnostics.hasFault()) {
+            telemetry.addLine("!! PINPOINT FAULT: power-cycle the robot (battery out 10 s) before"
+                    + " the match; AUTO will not drive");
+        }
         if (!followerError.isEmpty()) {
             telemetry.addLine("WARNING: " + followerError);
         }
@@ -261,9 +276,14 @@ public abstract class AutoBase extends OpMode {
         elementCounter.setCount(LauncherConstants.PRELOAD_BALLS);
         if (follower != null) {
             follower.update();
+            pinpointDiagnostics.update();
             OdometryDriver.StartCheck check = driver.checkStartPose(startPose);
             startCheckText = driver.getResultText()
                     + (check == OdometryDriver.StartCheck.FAULT ? " -> robot will NOT drive" : "");
+            if (pinpointDiagnostics.hasFault()) {
+                driver.lockOdometry("Pinpoint fault at START (" + pinpointDiagnostics.summary() + ")");
+                startCheckText += "; PINPOINT FAULT -> robot will NOT drive (power-cycle it)";
+            }
         } else {
             startCheckText = "No odometry: robot will NOT drive";
         }
@@ -284,7 +304,13 @@ public abstract class AutoBase extends OpMode {
         if (follower != null) {
             follower.update();
         }
-        Pose pose = getPose();
+        pinpointDiagnostics.update();
+        // The driver's checked pose: after a Pinpoint reboot it is the restored pose, not (0, 0, 0)
+        Pose pose = driver != null ? driver.updatePose() : getPose();
+        if (driver != null && driver.getResetRecoveries() > loggedRecoveries) {
+            loggedRecoveries = driver.getResetRecoveries();
+            sequence.note(driver.getLastRecoveryText() + "; Pinpoint " + pinpointDiagnostics.summary());
+        }
         if (follower != null) {
             checkTerritory(pose);
             checkTimeToPark(pose);
@@ -320,6 +346,8 @@ public abstract class AutoBase extends OpMode {
         if (matchTimer.isStarted()) {
             // G407 hand-off: TeleOp starts from what the robot still holds.
             PoseStorage.saveElementCount(elementCounter.getCount());
+            sequence.note(pinpointDiagnostics.getMatchSummary() + ", reset recoveries "
+                    + (driver != null ? driver.getResetRecoveries() : 0));
         }
         for (Subsystem subsystem : subsystems) {
             subsystem.stop();
@@ -797,7 +825,10 @@ public abstract class AutoBase extends OpMode {
             telemetry.addLine("DRIVE STOPPED by the G402 territory guard");
         }
         if (driver != null && driver.isOdometryLost()) {
-            telemetry.addLine("ODOMETRY LOST: drive stopped");
+            telemetry.addLine("ODOMETRY LOST: drive stopped (Pinpoint " + pinpointDiagnostics.summary() + ")");
+        }
+        if (driver != null && driver.getResetRecoveries() > 0) {
+            telemetry.addData("Pinpoint resets recovered", driver.getResetRecoveries());
         }
         if (isParking) {
             telemetry.addLine("Parking");
