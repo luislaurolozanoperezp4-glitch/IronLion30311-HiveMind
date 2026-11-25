@@ -79,3 +79,9 @@ lint/generated/
 lint/outputs/
 lint/tmp/
 # lint/reports/
+# Iron Lion: read-only analysis clones of the source repos (never commit)
+legacy/
+# Local analysis snapshots that are not shared
+docs/snapshots/*.diff
+# Robot logs pulled from the Control Hub
+robot-logs/
