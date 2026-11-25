@@ -1,5 +1,7 @@
 // Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PreloadRouteAuto.java @ a7b8f4c (leg distances, time limits)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PedroAutoBase.java @ a7b8f4c (PATH_TIMEOUT_SEC)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PreloadRouteAuto.java @ 4fd2293 (south-wall collect line, angled other-cell spot, Limelight aim) @ 1e723f2 (PARK_BACK_CM, OTHER_CELL_AIM_SEC, OTHER_CELL_MIN_SHOOT_SEC)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PedroAutoBase.java @ 1e723f2 (PARK_MARGIN_SEC, PARK_MAX_POWER, fitted leg time model) @ f26f8d0 (AIM_* limits)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/theautonomous / TeamCode/.../TimeModel.java @ 125df22 (idea: per-step time estimates)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/auto-leave-park / TeamCode/.../opmodes/auto/LeaveParkAuto.java @ e455142 (encoder LEAVE values)
 //          — adapted for BIOBUZZ
@@ -37,8 +39,20 @@ public final class AutoConstants {
     public static final double SECOND_BACK_CM = 5.0;
     /** First move to the right (field -x), toward the west lane. TESTED. */
     public static final double RIGHT_1_CM = 60.0;
-    /** Long move back (field +y) up the west lane. 240 ended ~10 cm too far. TESTED. */
-    public static final double LONG_BACK_CM = 230.0;
+    /**
+     * PARK depth: the robot center this far back (field +y) from the near start, so PARK is at
+     * field y ~95.4, the LOW edge of the red LOADING ZONE (y 96.5-119.5). Vision-align 1e723f2
+     * (team strategy): a PARK counts with part of the robot in the zone and both alliance robots
+     * must fit, so ours stays low and the partner parks above (the far wait-TIP auto parks at the
+     * top). The robot (y 86.4-104.4) still overlaps the zone by ~8 in. The TESTED 4/4 run parked
+     * at 245 cm (y 105.5, back 230 up the lane). TODO: TUNE (re-test on the robot)
+     */
+    public static final double PARK_BACK_CM = 219.5;
+    /**
+     * Long move back (field +y) up the west lane, ending level with PARK. Derived from
+     * {@link #PARK_BACK_CM} (204.5 cm). TESTED value was 230 (240 ended ~10 cm too far).
+     */
+    public static final double LONG_BACK_CM = PARK_BACK_CM - LEAVE_BACK_CM - SECOND_BACK_CM;
     /**
      * Last move right into the LOADING ZONE. 40 and 50 fell short; 60 was TESTED but ended the
      * robot ~0.8 in from the red wall, so LEAVE was at risk. Team decision (rules agent,
@@ -51,9 +65,20 @@ public final class AutoConstants {
 
     /** Turn before collecting, degrees clockwise (front from south to west). FITTED. */
     public static final double COLLECT_TURN_DEGREES = 90.0;
-    /** Distance driven toward the ball row with the intake off. FITTED. */
-    public static final double COLLECT_START_CM = 60.0;
-    /** Where collecting ends, from the shooting spot (intake on from COLLECT_START_CM). FITTED. */
+    /**
+     * The 4 POLLEN of the row lie against the audience wall at field x ~1-13 in (game manual), not
+     * 10 cm off it as in the tests. The robot collects along the wall: its center this far back
+     * from the start line, i.e. its side ~1 cm off the wall (it starts against it). Vision-align
+     * 4fd2293. TODO: TUNE (not yet run on the robot)
+     */
+    public static final double COLLECT_LINE_BACK_CM = 1.0;
+    /**
+     * Where the slow, intake-on part starts, right (field -x) of the start: 71 cm = field x ~29 in,
+     * the intake ~7 in before the first ball. Vision-align 4fd2293 (was 60, FITTED for the test
+     * row). TODO: TUNE
+     */
+    public static final double COLLECT_START_CM = 71.0;
+    /** Where collecting ends, right of the start: the intake at the red wall. FITTED. */
     public static final double COLLECT_END_CM = 120.0;
     /** Top power while driving over the balls. 0.3 was too fast, 0.15 risks stalling. FITTED. */
     public static double COLLECT_POWER = 0.2;
@@ -66,35 +91,47 @@ public final class AutoConstants {
     /** Exit waypoint after collecting (away from the west wall before turning). FITTED. */
     public static final double COLLECT_EXIT_BACK_CM = 53.0;
     public static final double COLLECT_EXIT_RIGHT_CM = 84.0;
-    /** The other-cell spot stops this much short of the exact mirror, to clear the back-wall FLOWER. FITTED. */
-    public static final double OTHER_SPOT_SHORTEN_CM = 15.0;
-    /** Robot center to the audience wall at the near start (half an 18 in robot). TESTED. */
-    public static final double START_WALL_DISTANCE_CM = 22.86;
-    /** Field length between the inner wall faces (144 in). Decision D19. */
-    public static final double FIELD_LENGTH_CM = 365.76;
+    /**
+     * Spot to shoot at our AUDIENCE cell from the north side, facing it at an angle: field
+     * ~(46.8, 118.4) in, heading 115 deg (the team's Pedro visualizer edit, vision-align 4fd2293).
+     * It clears the back-wall FLOWER and is shorter than going straight in front of the cell
+     * (the old spot was the mirrored shooting spot (57, 125.2), 15 cm shortened). Given as back
+     * and right of the near start, plus the turn from the start heading. TODO: TUNE
+     */
+    public static final double OTHER_SPOT_BACK_CM = 278.0;
+    public static final double OTHER_SPOT_RIGHT_CM = 26.0;
+    public static final double OTHER_SPOT_TURN_DEGREES = 205.0;
 
     // ---------------- Hard time limits (TESTED backstops from VA PreloadRouteAuto) ----------------
 
     /** Collecting is skipped if the first volley ends after this match time. */
     public static double COLLECT_LATEST_START_SECONDS = 11.0;
-    /** Going to the other cell is skipped if it would start after this match time. */
-    public static double OTHER_CELL_LATEST_START_SECONDS = 15.0;
-    /** A volley at our scoring cell ends by this match time (the park takes ~6.3 s). */
+    /** The PRELOAD volley at our scoring cell ends by this match time (the park takes ~6.3 s). */
     public static double LATEST_SHOOT_END_SECONDS = 22.0;
-    /** A volley at the other cell ends by this match time (~3 s park from that side). */
-    public static double OTHER_CELL_SHOOT_END_SECONDS = 26.5;
     /** Pause between odometry legs so the robot settles. TESTED. */
     public static double SETTLE_SECONDS = 0.2;
 
-    // ---------------- Time estimates for AutoPlanner ----------------
+    // ---------------- Time model for AutoPlanner (FITTED, vision-align 1e723f2) ----------------
 
     /**
-     * Average driving speed of the odometry driver over a leg, including the ramp. FITTED to the
-     * ~6.3 s measured for the 140 in near park legs. TODO: TUNE from the pose logs.
+     * Leg time model fitted on the 2026-11-24 runs (a 70 in park leg in 2.1 s, a 35 + 70 in park
+     * in 3.6 s at power 0.85): route seconds = ESTIMATE_ROUTE_FIXED_SECONDS + per leg
+     * (ESTIMATE_PER_LEG_SECONDS + inches / (this * power)). FITTED. It also reproduces the
+     * ~6.3 s of the TESTED near park legs (with the settles).
      */
-    public static double CRUISE_INCHES_PER_SECOND = 25.0;
-    /** Fixed time per leg (start, stop, settle). TODO: TUNE */
-    public static double LEG_OVERHEAD_SECONDS = 0.2;
+    public static double ESTIMATE_INCHES_PER_SECOND_PER_POWER = 70.0;
+    /** Fixed seconds per route (accelerating, slowing down). FITTED. */
+    public static double ESTIMATE_ROUTE_FIXED_SECONDS = 0.75;
+    /** Fixed seconds per leg (corners, stops). FITTED. */
+    public static double ESTIMATE_PER_LEG_SECONDS = 0.55;
+    /**
+     * Park time budget: the robot must be parked this long before the 30 s end (the team asked
+     * for 1-2 s). Volleys end and the park speeds up to keep it. Vision-align 1e723f2. The
+     * emergency time guard keeps its own, larger reserve (MatchConstants.AUTO_PARK_RESERVE_SECONDS).
+     */
+    public static double PARK_MARGIN_SECONDS = 1.5;
+    /** Top power a late park may use (normal legs use AUTO_MAX_POWER). TODO: TUNE (never run at 1.0) */
+    public static double PARK_MAX_POWER = 1.0;
     /** Average in-place turn speed. TODO: TUNE */
     public static double TURN_DEGREES_PER_SECOND = 120.0;
     /** Flywheel spin-up before the first shot of a volley. TODO: TUNE */
@@ -126,14 +163,37 @@ public final class AutoConstants {
     public static double OTHER_CELL_LOOK_SECONDS = 0.8;
     /** POLLEN RPM at the other cell (2800 shot short on 2026-11-24). TODO: TUNE */
     public static double OTHER_CELL_POLLEN_RPM = 2950.0;
-    /** The other-cell volley needs at least this long before its deadline to start. (VA: 1.0) */
-    public static double OTHER_CELL_MIN_SHOOT_SECONDS = 1.0;
-    /** Largest Limelight distance correction at the other cell (never away from the cell). TESTED (VA). */
-    public static double VISION_APPROACH_MAX_CM = 25.0;
-    /** Smaller vision corrections are skipped. (VA: 3 cm) */
-    public static double VISION_APPROACH_MIN_CM = 3.0;
-    /** Camera-to-cell distance to aim for when it was not measured at the first volley. (VA) */
-    public static double DEFAULT_SHOOT_DISTANCE_METERS = 1.20;
+    /**
+     * The other cell is only tried if, by the time model, the robot can get there, look, aim
+     * (this long), shoot for at least {@link #OTHER_CELL_MIN_SHOOT_SECONDS} and still park by the
+     * park deadline. Vision-align 1e723f2. TODO: TUNE
+     */
+    public static double OTHER_CELL_AIM_SECONDS = 2.0;
+    /** Shortest other-cell volley worth going for (1-2 balls). Vision-align 1e723f2. TODO: TUNE */
+    public static double OTHER_CELL_MIN_SHOOT_SECONDS = 2.0;
+
+    // ---------------- Limelight aim at a cell (vision-align 4fd2293 / f26f8d0, UNTESTED) ----------------
+
+    /**
+     * Aim reference when it was not measured at the first volley: bearing and camera-to-cell
+     * distance of our scoring cell seen from the shooting spot (the volley that scores).
+     */
+    public static double DEFAULT_SHOOT_BEARING_DEGREES = 10.8;
+    public static double DEFAULT_SHOOT_DISTANCE_METERS = 1.22;
+    /** Largest aim turn, in degrees. TODO: TUNE */
+    public static double AIM_MAX_TURN_DEGREES = 25.0;
+    /**
+     * Sign of the aim turn: -1 = a cell right of the crosshair needs a clockwise turn (the camera
+     * is on the rear). TODO: TUNE (flip it if the robot turns away from the cell)
+     */
+    public static double AIM_TURN_SIGN = -1.0;
+    /** Smaller aim turns are skipped, degrees. */
+    public static double AIM_MIN_TURN_DEGREES = 1.5;
+    /** Largest aim move toward the cell / away from it (toward the FLOWER), cm. TODO: TUNE */
+    public static double AIM_MAX_TOWARD_CM = 25.0;
+    public static double AIM_MAX_AWAY_CM = 8.0;
+    /** Smaller aim moves are skipped, cm. */
+    public static double AIM_MIN_MOVE_CM = 3.0;
     /**
      * AutoPlanner: a cycle is only started if at least a short volley (spin-up + this many balls)
      * fits; the volley itself is cut by its deadline. TODO: TUNE

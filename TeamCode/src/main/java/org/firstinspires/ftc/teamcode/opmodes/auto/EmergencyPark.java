@@ -1,5 +1,5 @@
 // Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PreloadRouteAuto.java @ a7b8f4c (west-lane park legs right1, longBack, right2; collectExit "do not turn at the wall")
-//          — adapted for BIOBUZZ (park from any pose, used when time runs out mid-step)
+//          — adapted for BIOBUZZ (park from any pose, used when time runs out mid-step; PARK heading squared to the walls since the angled other-cell heading of vision-align 4fd2293)
 package org.firstinspires.ftc.teamcode.opmodes.auto;
 
 import com.pedropathing.math.Pose;
@@ -20,8 +20,10 @@ import java.util.List;
  *     <li>North of the HIVE: straight to PARK (the tested other-cell park diagonal).</li>
  *     <li>Otherwise: sideways into the west lane, up the lane, then into PARK.</li>
  * </ul>
- * The heading never changes (no in-place turn), so a robot stopped next to a wall cannot sweep
- * its corners into it. Pure logic: tested by {@code EmergencyParkTest}.
+ * There is no in-place turn, so a robot stopped next to a wall cannot sweep its corners into it.
+ * The heading is kept on the way and only squared to the nearest wall direction on the last leg
+ * (an angled 18 in robot, for example at the 115 deg other-cell heading, would touch the red wall
+ * at PARK and lose LEAVE). Pure logic: tested by {@code AutoSafetyTest}.
  */
 public final class EmergencyPark {
 
@@ -48,13 +50,22 @@ public final class EmergencyPark {
             }
             redWaypoints.add(new Pose(laneX, laneNorthY, heading));
         }
-        redWaypoints.add(new Pose(NearRoutePoses.PARK.x(), NearRoutePoses.PARK.y(), heading));
+        redWaypoints.add(new Pose(NearRoutePoses.PARK.x(), NearRoutePoses.PARK.y(), squareHeading(heading)));
 
         List<Pose> fieldWaypoints = new ArrayList<>();
         for (Pose pose : redWaypoints) {
             fieldWaypoints.add(alliance.toField(pose));
         }
         return fieldWaypoints;
+    }
+
+    /**
+     * @param headingRadians any heading
+     * @return the nearest of 0, 90, 180 and 270 degrees (radians): robot sides parallel to the walls
+     */
+    static double squareHeading(double headingRadians) {
+        double quarterTurn = Math.PI / 2.0;
+        return Math.round(headingRadians / quarterTurn) * quarterTurn;
     }
 
     /**

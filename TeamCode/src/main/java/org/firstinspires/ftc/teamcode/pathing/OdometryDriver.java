@@ -245,7 +245,19 @@ public class OdometryDriver {
      * @param target waypoint to pass
      */
     public void driveThrough(String name, Pose target) {
-        startLeg(name, target, DriveConstants.AUTO_MAX_POWER, true);
+        driveThrough(name, target, DriveConstants.AUTO_MAX_POWER);
+    }
+
+    /**
+     * Same as {@link #driveThrough(String, Pose)} with another top power (for example a faster
+     * park when time is short).
+     *
+     * @param name     leg name for telemetry and logs
+     * @param target   waypoint to pass
+     * @param maxPower top power for this leg (0 to 1)
+     */
+    public void driveThrough(String name, Pose target, double maxPower) {
+        startLeg(name, target, maxPower, true);
     }
 
     /**

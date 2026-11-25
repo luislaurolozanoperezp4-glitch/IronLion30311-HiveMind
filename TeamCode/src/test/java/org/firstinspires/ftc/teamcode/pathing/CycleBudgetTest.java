@@ -16,6 +16,7 @@ import org.firstinspires.ftc.teamcode.util.MatchTimer;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /** Checks the "one more cycle or go park" decision of {@link AutoPlanner} with a fake clock. */
@@ -84,12 +85,13 @@ public class CycleBudgetTest {
 
     @Test
     public void parkEstimateMatchesTheMeasuredRun() {
-        // vision-align measured ~6.3 s for the near park legs
-        List<Pose> legs = new ArrayList<>();
-        legs.add(NearRoutePoses.SHOOT_SPOT);
-        legs.addAll(new PreloadParkPaths(Alliance.RED).getParkWaypoints());
-        double estimate = AutoPlanner.estimateLegsSeconds(legs);
-        assertEquals(6.3, estimate, 1.0);
+        // vision-align measured ~6.3 s for the TESTED near park legs (back 5, right 60, back
+        // 230, right 60 cm), stopping and settling on each leg
+        List<Pose> legs = Arrays.asList(NearRoutePoses.SHOOT_SPOT,
+                NearRoutePoses.relative(15.0, 0.0, -90.0), NearRoutePoses.relative(15.0, 60.0, -90.0),
+                NearRoutePoses.relative(245.0, 60.0, -90.0), NearRoutePoses.relative(245.0, 120.0, -90.0));
+        double estimate = AutoPlanner.estimateLegsSeconds(legs) + 4 * AutoConstants.SETTLE_SECONDS;
+        assertEquals(6.3, estimate, 0.5);
         // The Pedro path of the same legs gives the same estimate
         List<com.pedropathing.paths.Path> paths = new ArrayList<>();
         paths.add(new PreloadParkPaths(Alliance.RED).park());

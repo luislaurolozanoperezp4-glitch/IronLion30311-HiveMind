@@ -1,4 +1,4 @@
-// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PreloadRouteAuto.java @ a7b8f4c (buildPoses, relative) — adapted for BIOBUZZ
+// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PreloadRouteAuto.java @ a7b8f4c (buildPoses, relative) @ 4fd2293 (collect along the wall, angled other-cell spot) @ 1e723f2 (park at the zone's low edge) — adapted for BIOBUZZ (park kept 2.1 in off the wall)
 package org.firstinspires.ftc.teamcode.pathing.paths;
 
 import com.pedropathing.math.Pose;
@@ -19,15 +19,15 @@ import org.firstinspires.ftc.teamcode.config.FieldConstants;
  * SHOOT_SPOT              (57.000, 12.937,  -90)   LEAVE 10 cm, shoot here (TESTED)
  * BACK_OFF_2              (57.000, 14.906,  -90)
  * WEST_LANE_SOUTH (right1)(33.378, 14.906,  -90)
- * WEST_LANE_NORTH (long)  (33.378,105.457,  -90)
- * PARK (right2)           (11.134,105.457,  -90)   PARK (2.1 in off the wall; TESTED at x 9.756)
- * COLLECT_START           (33.378, 12.937,  180)
- * COLLECT_END             ( 9.756, 12.937,  180)
+ * WEST_LANE_NORTH (long)  (33.378, 95.417,  -90)   TESTED at y 105.457 (long back 230)
+ * PARK (right2)           (11.134, 95.417,  -90)   zone's low edge, 2.1 in off the wall
+ * COLLECT_START           (29.047,  9.394,  180)   along the audience wall (4fd2293)
+ * COLLECT_END             ( 9.756,  9.394,  180)
  * COLLECT_EXIT            (23.929, 29.866,  180)
  * SOUTH_WAYPOINT          (33.378, 40.496,  -90)
- * NORTH_WAYPOINT          (33.378,110.181,   90)
- * OTHER_SPOT              (57.000,125.157,   90)
- * OTHER_PARK              (11.134,105.457,   90)
+ * NORTH_WAYPOINT          (33.378,110.181,  115)
+ * OTHER_SPOT              (46.764,118.449,  115)   angled spot facing the audience cell
+ * OTHER_PARK              (11.134, 95.417,   90)   square to the wall again (see OTHER_PARK)
  * </pre>
  */
 public final class NearRoutePoses {
@@ -41,16 +41,12 @@ public final class NearRoutePoses {
     public static final double START_HEADING_DEG = -90.0;
     /** Heading while collecting the row (front to the red wall), degrees. */
     public static final double COLLECT_HEADING_DEG = START_HEADING_DEG - AutoConstants.COLLECT_TURN_DEGREES;
-    /** Heading at the other cell (launchers face the HIVE from the north), degrees. */
-    public static final double OTHER_HEADING_DEG = START_HEADING_DEG + 180.0;
+    /** Heading at the other cell (launchers face our AUDIENCE cell from the north-west), degrees. */
+    public static final double OTHER_HEADING_DEG = START_HEADING_DEG + AutoConstants.OTHER_SPOT_TURN_DEGREES;
 
     private static final double BACK_AFTER_LEAVE = AutoConstants.LEAVE_BACK_CM;
     private static final double BACK_AFTER_SECOND = BACK_AFTER_LEAVE + AutoConstants.SECOND_BACK_CM;
     private static final double BACK_AFTER_LONG = BACK_AFTER_SECOND + AutoConstants.LONG_BACK_CM;
-    /** Back distance to the other-cell spot: the shooting spot mirrored across the field, shortened. */
-    private static final double OTHER_BACK_CM = (AutoConstants.FIELD_LENGTH_CM
-            - (AutoConstants.START_WALL_DISTANCE_CM + BACK_AFTER_LEAVE))
-            - AutoConstants.START_WALL_DISTANCE_CM - AutoConstants.OTHER_SPOT_SHORTEN_CM;
 
     /** Near start. TESTED. */
     public static final Pose START = FieldConstants.NEAR_START;
@@ -58,12 +54,12 @@ public final class NearRoutePoses {
     public static final Pose SHOOT_SPOT = relative(BACK_AFTER_LEAVE, 0.0, START_HEADING_DEG);
     /** Shooting spot after the turn toward the ball row. */
     public static final Pose SHOOT_SPOT_FACING_COLLECT = relative(BACK_AFTER_LEAVE, 0.0, COLLECT_HEADING_DEG);
-    /** Where the intake turns on, on the way to the ball row. */
-    public static final Pose COLLECT_START = relative(BACK_AFTER_LEAVE, AutoConstants.COLLECT_START_CM,
-            COLLECT_HEADING_DEG);
+    /** Where the intake turns on, on the way to the ball row (side ~1 cm off the audience wall). */
+    public static final Pose COLLECT_START = relative(AutoConstants.COLLECT_LINE_BACK_CM,
+            AutoConstants.COLLECT_START_CM, COLLECT_HEADING_DEG);
     /** End of the ball row (less than 1 in from the red wall: do not turn here). */
-    public static final Pose COLLECT_END = relative(BACK_AFTER_LEAVE, AutoConstants.COLLECT_END_CM,
-            COLLECT_HEADING_DEG);
+    public static final Pose COLLECT_END = relative(AutoConstants.COLLECT_LINE_BACK_CM,
+            AutoConstants.COLLECT_END_CM, COLLECT_HEADING_DEG);
     /** Second back-off before the park legs. TESTED. */
     public static final Pose BACK_OFF_2 = relative(BACK_AFTER_SECOND, 0.0, START_HEADING_DEG);
     /** South end of the west lane (the original "right1"). TESTED. */
@@ -78,7 +74,7 @@ public final class NearRoutePoses {
     /** Pass-through waypoint south-west of the HIVE. */
     public static final Pose SOUTH_WAYPOINT = relative(AutoConstants.SOUTH_WAYPOINT_BACK_CM,
             AutoConstants.RIGHT_1_CM, START_HEADING_DEG);
-    /** Same position as {@link #SOUTH_WAYPOINT}, turned 180 degrees (toward the other cell). */
+    /** Same position as {@link #SOUTH_WAYPOINT}, turned to the other-cell heading. */
     public static final Pose SOUTH_WAYPOINT_TURNED = relative(AutoConstants.SOUTH_WAYPOINT_BACK_CM,
             AutoConstants.RIGHT_1_CM, OTHER_HEADING_DEG);
     /** Pass-through waypoint north-west of the HIVE. */
@@ -87,11 +83,19 @@ public final class NearRoutePoses {
     /** Exit waypoint after collecting, away from the red wall before turning. */
     public static final Pose COLLECT_EXIT = relative(AutoConstants.COLLECT_EXIT_BACK_CM,
             AutoConstants.COLLECT_EXIT_RIGHT_CM, COLLECT_HEADING_DEG);
-    /** Spot facing the other cell from the north, shortened to clear the back-wall FLOWER. */
-    public static final Pose OTHER_SPOT = relative(OTHER_BACK_CM, 0.0, OTHER_HEADING_DEG);
-    /** PARK position reached from the other cell (heading kept from that side). */
+    /** Angled spot facing our AUDIENCE cell from the north, clear of the back-wall FLOWER. */
+    public static final Pose OTHER_SPOT = relative(AutoConstants.OTHER_SPOT_BACK_CM,
+            AutoConstants.OTHER_SPOT_RIGHT_CM, OTHER_HEADING_DEG);
+    /**
+     * Heading of the PARK reached from the other cell: square to the red wall (launchers north),
+     * the TESTED heading of that park leg. Vision-align 4fd2293 kept the angled 115 deg here, but
+     * a turned 18 in robot reaches ~12 in sideways, so at x 11.1 a corner would touch the wall
+     * and LEAVE would fail (team decision: every park ends at least 2 in off the wall).
+     */
+    public static final double OTHER_PARK_HEADING_DEG = START_HEADING_DEG + 180.0;
+    /** PARK position reached from the other cell (square to the wall, see {@link #OTHER_PARK_HEADING_DEG}). */
     public static final Pose OTHER_PARK = relative(BACK_AFTER_LONG,
-            AutoConstants.RIGHT_1_CM + AutoConstants.RIGHT_2_CM, OTHER_HEADING_DEG);
+            AutoConstants.RIGHT_1_CM + AutoConstants.RIGHT_2_CM, OTHER_PARK_HEADING_DEG);
 
     /**
      * Pose {@code backCm} behind and {@code rightCm} to the right of the near start, in the

@@ -30,6 +30,7 @@ import org.firstinspires.ftc.teamcode.subsystems.Lights;
 import org.firstinspires.ftc.teamcode.subsystems.Subsystem;
 import org.firstinspires.ftc.teamcode.subsystems.Vision;
 import org.firstinspires.ftc.teamcode.subsystems.vision.HiveCell;
+import org.firstinspires.ftc.teamcode.subsystems.vision.HiveClusterPose;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.GamepadEx;
 import org.firstinspires.ftc.teamcode.util.MatchTimer;
@@ -420,7 +421,18 @@ public abstract class AutoBase extends OpMode {
      * @return a pass-through leg (start the next leg right after it)
      */
     protected AutoStep driveThrough(String name, Pose target, Mode mode) {
-        return new DriveStep(name, DriveKind.DRIVE_THROUGH, target, DriveConstants.AUTO_MAX_POWER, 0.0, mode);
+        return driveThrough(name, target, DriveConstants.AUTO_MAX_POWER, mode);
+    }
+
+    /**
+     * @param name     leg name
+     * @param target   field waypoint passed without stopping
+     * @param maxPower top power
+     * @param mode     mechanisms during the leg
+     * @return a pass-through leg (start the next leg right after it)
+     */
+    protected AutoStep driveThrough(String name, Pose target, double maxPower, Mode mode) {
+        return new DriveStep(name, DriveKind.DRIVE_THROUGH, target, maxPower, 0.0, mode);
     }
 
     /**
@@ -468,16 +480,51 @@ public abstract class AutoBase extends OpMode {
      * @return the steps
      */
     protected List<AutoStep> parkSteps(String name, List<Pose> waypoints, boolean isStopEachLeg) {
+        return parkSteps(name, waypoints, isStopEachLeg, DriveConstants.AUTO_MAX_POWER);
+    }
+
+    /**
+     * Park legs at the power that parks by the deadline: {@link AutoPlanner#getParkPower} from
+     * the current pose (the normal power when there is time, up to {@code PARK_MAX_POWER} when
+     * late; vision-align 1e723f2). The plan is logged.
+     *
+     * @param name          leg name prefix
+     * @param waypoints     field waypoints, the last is PARK
+     * @param isStopEachLeg see {@link #parkSteps(String, List, boolean)}
+     * @return the steps
+     */
+    protected List<AutoStep> timedParkSteps(String name, List<Pose> waypoints, boolean isStopEachLeg) {
+        List<Pose> route = new ArrayList<>();
+        route.add(getPose());
+        route.addAll(waypoints);
+        double power = planner.getParkPower(route);
+        sequence.note(String.format(Locale.US, "Park plan at %.1f s: power %.2f, ~%.1f s, deadline %.1f s",
+                matchTimer.getElapsedSeconds(), power, AutoPlanner.estimateRouteSeconds(power, route),
+                AutoPlanner.getParkDeadlineSeconds()));
+        return parkSteps(name, waypoints, isStopEachLeg, power);
+    }
+
+    /**
+     * Park legs: mark parking, the legs, settle and hold.
+     *
+     * @param name          leg name prefix
+     * @param waypoints     field waypoints, the last is PARK
+     * @param isStopEachLeg see {@link #parkSteps(String, List, boolean)}
+     * @param power         top power of every leg
+     * @return the steps
+     */
+    protected List<AutoStep> parkSteps(String name, List<Pose> waypoints, boolean isStopEachLeg,
+                                       double power) {
         List<AutoStep> steps = new ArrayList<>();
         steps.add(markParking());
         for (int i = 0; i < waypoints.size(); i++) {
             String legName = String.format(Locale.US, "%s leg %d/%d", name, i + 1, waypoints.size());
             boolean isLast = i == waypoints.size() - 1;
             if (isStopEachLeg || isLast) {
-                steps.add(driveTo(legName, waypoints.get(i), Mode.IDLE));
+                steps.add(driveTo(legName, waypoints.get(i), power, Mode.IDLE));
                 steps.add(settle(AutoConstants.SETTLE_SECONDS, Mode.IDLE));
             } else {
-                steps.add(driveThrough(legName, waypoints.get(i), Mode.IDLE));
+                steps.add(driveThrough(legName, waypoints.get(i), power, Mode.IDLE));
             }
         }
         steps.add(holdParked());
@@ -701,6 +748,14 @@ public abstract class AutoBase extends OpMode {
         return planner;
     }
 
+    /**
+     * @param cell a HIVE cell
+     * @return its tag cluster pose (camera frame) if it is in the latest frame, else null
+     */
+    protected HiveClusterPose getCellPose(HiveCell cell) {
+        return vision.isCellInView(cell) ? vision.getPose(cell) : null;
+    }
+
     /** @return the Limelight subsystem */
     protected Vision getVision() {
         return vision;
@@ -874,7 +929,7 @@ public abstract class AutoBase extends OpMode {
                     driver.driveTo(getName(), target, maxPower);
                     break;
                 case DRIVE_THROUGH:
-                    driver.driveThrough(getName(), target);
+                    driver.driveThrough(getName(), target, maxPower);
                     break;
                 case TURN:
                     driver.turnTo(getName(), value);

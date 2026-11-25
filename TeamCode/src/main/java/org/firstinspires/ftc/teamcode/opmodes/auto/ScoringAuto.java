@@ -1,4 +1,5 @@
-// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PreloadRouteAuto.java @ a7b8f4c (runRoutine, runCollectRoutine, returnAndCheckTip, parkFromShootSide, shootAtOtherCellAndPark, relativeOther, shootTimeLeft)
+// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PreloadRouteAuto.java @ a7b8f4c (runRoutine, runCollectRoutine, returnAndCheckTip, parkFromShootSide, shootAtOtherCellAndPark, shootTimeLeft) @ 4fd2293 (bearing + distance reference, aimAtCell) @ 1e723f2 (volleyTimeLeft, hasTimeForOtherCell, parkPower)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PedroAutoBase.java @ f26f8d0 (aimAtCell, bearingDeg)
 //          docs/BEST_OF_MATRIX.md section 5 (time-aware cycle loop; Far Cycle from the other-cell spot)
 //          — adapted for BIOBUZZ (non-blocking steps; AutoPlanner decides "cycle again" or "go park")
 package org.firstinspires.ftc.teamcode.opmodes.auto;
@@ -19,6 +20,7 @@ import org.firstinspires.ftc.teamcode.subsystems.vision.HiveClusterPose;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.DoubleSupplier;
@@ -30,22 +32,31 @@ import java.util.function.DoubleSupplier;
  * <p>
  * <b>NEAR start</b> (57, 9, -90 deg), TESTED 4/4 preload:
  * <ol>
- *     <li>LEAVE 10 cm, shoot the 4 preloaded POLLEN at 2950 RPM (ends by 22 s).</li>
+ *     <li>LEAVE 10 cm, measure our scoring cell's bearing and distance (the aim reference), shoot
+ *     the 4 preloaded POLLEN at 2950 RPM (ends by 22 s).</li>
  *     <li>Decision ({@link AutoPlanner}): CYCLE_AGAIN if a collect cycle plus the park after it
  *     still fit (with the 4 s park reserve) and the volley ended before 11 s (TESTED backstop);
- *     otherwise GO_PARK with the TESTED park legs (back 5, right 60, back 230, right 56.5 cm;
- *     the last leg was 60 cm in the tested run, shortened for the 2 in LEAVE gap).</li>
+ *     otherwise GO_PARK with the near park legs (back 5, right 60, back 204.5, right 56.5 cm: the
+ *     TESTED legs with the long leg ending at the zone's low edge and the last leg kept 2 in off
+ *     the wall).</li>
  *     <li>Cycle: early TIP watch on our scoring cell (up to 4 s, shorter if time is short), turn
- *     90 deg, collect the ball row slowly, then
+ *     90 deg, collect the ball row along the audience wall slowly, then
  *     <ul>
- *         <li>TIP seen: around the HIVE to the other cell (if before 15 s), shoot there, park;</li>
+ *         <li>TIP seen: around the HIVE to the angled other-cell spot, if the time model says the
+ *         robot can still aim, shoot a little and park; aim with the Limelight, shoot, park;</li>
  *         <li>no TIP: back to the shooting spot, re-center, TIP check; up = shoot here and ask
- *         the planner again (it parks: {@code MAX_CYCLES} = 1); down = other cell.</li>
+ *         the planner again (it parks: {@code MAX_CYCLES} = 1); down = other cell (same time
+ *         check).</li>
  *     </ul></li>
  * </ol>
+ * Volleys after the preload end when only the park time is left, and the park legs speed up
+ * when late (vision-align 1e723f2, {@link AutoPlanner#getVolleyTimeLeft},
+ * {@link AutoPlanner#getParkPower}).
+ * <p>
  * <b>FAR start</b> (8.96, 131.19, 90 deg), <b>UNTESTED</b> (decision D21): drive to the
- * other-cell spot north of the HIVE; if that cell is seen, shoot the preload there; otherwise
- * go down the west lane to the near shooting spot and shoot there. Then the same decisions.
+ * other-cell spot north of the HIVE; if that cell is seen, aim and shoot the preload there;
+ * otherwise go down the west lane to the near shooting spot and shoot there. Then the same
+ * decisions.
  * <p>
  * The time guard in {@link AutoBase} parks the robot from anywhere if a step runs long.
  */
@@ -53,11 +64,12 @@ public abstract class ScoringAuto extends AutoBase {
 
     /** Unit conversion (not a tuning value). */
     private static final double CM_PER_INCH = 2.54;
-    /** Turn between facing the HIVE from the south and from the north, degrees. */
-    private static final double HALF_TURN_DEGREES = 180.0;
+    private static final double CM_PER_METER = 100.0;
 
     private int cyclesDone;
-    /** Camera-to-scoring-cell distance at the first volley (the one that scores), meters. */
+    /** Bearing of our scoring cell at the first volley (the one that scores), degrees. */
+    private double shootBearingDegrees = Double.NaN;
+    /** Camera-to-scoring-cell distance at the first volley, meters. */
     private double shootDistanceMeters = Double.NaN;
 
     @Override
@@ -85,10 +97,14 @@ public abstract class ScoringAuto extends AutoBase {
         sequence.add(
                 driveTo("LEAVE back " + AutoConstants.LEAVE_BACK_CM + " cm", field(NearRoutePoses.SHOOT_SPOT), Mode.IDLE),
                 settle(AutoConstants.SETTLE_SECONDS, Mode.IDLE),
-                AutoStep.instant("Measure HIVE distance", new Runnable() {
+                AutoStep.instant("Measure HIVE bearing and distance", new Runnable() {
                     @Override
                     public void run() {
-                        shootDistanceMeters = cellForwardMeters(HiveCell.getBackCell(getAlliance()));
+                        HiveClusterPose scoring = getCellPose(HiveCell.getBackCell(getAlliance()));
+                        if (scoring != null) {
+                            shootBearingDegrees = bearingDegrees(scoring);
+                            shootDistanceMeters = distanceMeters(scoring);
+                        }
                     }
                 }),
                 shoot("Preload volley", LauncherConstants.PRELOAD_BALLS, LauncherConstants.POLLEN_AUTO_RPM,
@@ -139,32 +155,33 @@ public abstract class ScoringAuto extends AutoBase {
         if (isCycling) {
             getSequence().addNext(nearCycleSteps(cycleSeconds, parkSeconds));
         } else if (cyclesDone == 0) {
-            // TESTED park legs, straight from the preload volley
-            getSequence().addNext(parkSteps("Park", new PreloadParkPaths(getAlliance()).getParkWaypoints(), true));
+            // The TESTED park legs, straight from the preload volley
+            getSequence().addNext(timedParkSteps("Park", new PreloadParkPaths(getAlliance()).getParkWaypoints(), true));
         } else {
-            getSequence().addNext(parkSteps("Park", new PreloadCollectPaths(getAlliance()).getParkWaypoints(), false));
+            getSequence().addNext(timedParkSteps("Park", new PreloadCollectPaths(getAlliance()).getParkWaypoints(), false));
         }
     }
 
-    /** After the collect row: other cell (TIP seen early), or back to the shooting spot. */
+    /** After the collect row: other cell (TIP seen early, if it fits in time), or back to the shooting spot. */
     private void decideAfterCollect() {
         cyclesDone++;
         getSequence().note("Collect: " + getBallSummary());
-        boolean isOtherCellOpen = getPlanner().isBeforeDeadline(AutoConstants.OTHER_CELL_LATEST_START_SECONDS);
-        if (wasTipDown() && isOtherCellOpen) {
+        if (!wasTipDown()) {
+            getSequence().addNext(returnAndTipCheckSteps());
+            return;
+        }
+        List<Pose> waypoints = new OtherCellPaths(getAlliance()).getFromCollectWaypoints();
+        if (hasTimeForOtherCell(waypoints)) {
             List<AutoStep> steps = new ArrayList<>();
-            List<Pose> waypoints = new OtherCellPaths(getAlliance()).getFromCollectWaypoints();
             // Away from the red wall first (no turn there), then turning north on the way
             steps.add(driveThrough("Away from the wall", waypoints.get(0), Mode.SPIN_UP));
             steps.add(driveThrough("North-west of the HIVE", waypoints.get(1), Mode.SPIN_UP));
             steps.addAll(otherCellSteps(AutoConstants.COLLECT_BALLS));
             getSequence().addNext(steps);
-        } else if (wasTipDown()) {
+        } else {
             // Too late for the other cell. VA drove the south-west diagonal from the wall here;
             // the emergency park keeps the heading instead (no turn next to the wall).
-            getSequence().addNext(parkSteps("Park", EmergencyPark.plan(getPose(), getAlliance()), false));
-        } else {
-            getSequence().addNext(returnAndTipCheckSteps());
+            getSequence().addNext(timedParkSteps("Park", EmergencyPark.plan(getPose(), getAlliance()), false));
         }
     }
 
@@ -182,25 +199,25 @@ public abstract class ScoringAuto extends AutoBase {
                 AutoStep.instant("Decide after TIP check", new Runnable() {
                     @Override
                     public void run() {
+                        List<Pose> waypoints = new OtherCellPaths(getAlliance()).getFromShootSpotWaypoints();
                         if (wasCellSeen()) {
                             getSequence().addNext(shootSpotVolleySteps("Row volley", AutoConstants.COLLECT_BALLS));
-                        } else if (getPlanner().isBeforeDeadline(AutoConstants.OTHER_CELL_LATEST_START_SECONDS)) {
+                        } else if (hasTimeForOtherCell(waypoints)) {
                             List<AutoStep> steps = new ArrayList<>();
-                            List<Pose> waypoints = new OtherCellPaths(getAlliance()).getFromShootSpotWaypoints();
-                            // Turning 180 deg on the way, south-west of the HIVE
+                            // Turning to the other-cell heading on the way, south-west of the HIVE
                             steps.add(driveThrough("South-west of the HIVE", waypoints.get(0), Mode.SPIN_UP));
                             steps.add(driveThrough("North-west of the HIVE", waypoints.get(1), Mode.SPIN_UP));
                             steps.addAll(otherCellSteps(AutoConstants.COLLECT_BALLS));
                             getSequence().addNext(steps);
                         } else {
-                            getSequence().addNext(parkSteps("Park",
+                            getSequence().addNext(timedParkSteps("Park",
                                     new PreloadCollectPaths(getAlliance()).getParkWaypoints(), false));
                         }
                     }
                 }));
     }
 
-    /** At the other-cell spot after looking: shoot there (with the vision approach), or park. */
+    /** At the other-cell spot after looking: aim and shoot there, or park. */
     private void decideAtOtherCell(int balls) {
         if (canShootAtOtherCell()) {
             getSequence().addNext(otherCellVolleySteps(balls));
@@ -277,10 +294,11 @@ public abstract class ScoringAuto extends AutoBase {
                 })));
     }
 
-    /** A volley at the near shooting spot, then the planner decides again. */
+    /** A volley at the near shooting spot (ends when only the park time is left), then the planner decides again. */
     private List<AutoStep> shootSpotVolleySteps(String name, int balls) {
         return new ArrayList<>(Arrays.asList(
-                shoot(name, balls, LauncherConstants.POLLEN_AUTO_RPM, shootTimeLeft(AutoConstants.LATEST_SHOOT_END_SECONDS)),
+                shoot(name, balls, LauncherConstants.POLLEN_AUTO_RPM,
+                        volleyTimeLeft(new PreloadCollectPaths(getAlliance()).getParkWaypoints())),
                 AutoStep.instant("Decide after volley", new Runnable() {
                     @Override
                     public void run() {
@@ -304,17 +322,11 @@ public abstract class ScoringAuto extends AutoBase {
                 })));
     }
 
-    /** At the other-cell spot with the cell seen: Limelight approach, volley, decide. */
+    /** At the other-cell spot with the cell seen: Limelight aim, volley (park first), decide. */
     private List<AutoStep> otherCellVolleySteps(int balls) {
-        List<AutoStep> steps = new ArrayList<>();
-        double moveCm = getVisionApproachCm();
-        if (moveCm > AutoConstants.VISION_APPROACH_MIN_CM) {
-            steps.add(driveTo(String.format(Locale.US, "Vision approach %.0f cm", moveCm),
-                    field(otherSpotMovedTowardCell(moveCm)), Mode.SPIN_UP));
-            steps.add(settle(AutoConstants.SETTLE_SECONDS, Mode.SPIN_UP));
-        }
+        List<AutoStep> steps = aimSteps(HiveCell.getAudienceCell(getAlliance()));
         steps.add(shoot("Other cell volley", balls, AutoConstants.OTHER_CELL_POLLEN_RPM,
-                shootTimeLeft(AutoConstants.OTHER_CELL_SHOOT_END_SECONDS)));
+                volleyTimeLeft(otherSideParkWaypoints())));
         steps.add(AutoStep.instant("Decide after other volley", new Runnable() {
             @Override
             public void run() {
@@ -322,6 +334,59 @@ public abstract class ScoringAuto extends AutoBase {
             }
         }));
         return steps;
+    }
+
+    /**
+     * Limelight aim (vision-align 4fd2293 / f26f8d0, UNTESTED): turn, then move along the
+     * launcher axis, until {@code cell} is seen at the bearing and distance our scoring cell had at
+     * the first volley (the one that scores). Each step is skipped if the cell is not in view; the
+     * corrections are limited by the {@code AIM_*} constants.
+     */
+    private List<AutoStep> aimSteps(final HiveCell cell) {
+        return new ArrayList<>(Arrays.asList(
+                AutoStep.instant("Aim turn", new Runnable() {
+                    @Override
+                    public void run() {
+                        HiveClusterPose pose = getCellPose(cell);
+                        if (pose == null) {
+                            return;
+                        }
+                        double turnDegrees = aimTurnDegrees(bearingDegrees(pose), getAimBearingDegrees());
+                        if (Math.abs(turnDegrees) > AutoConstants.AIM_MIN_TURN_DEGREES) {
+                            getSequence().addNext(
+                                    turnTo(String.format(Locale.US, "Aim turn %.1f deg (bearing %.1f -> %.1f)",
+                                                    turnDegrees, bearingDegrees(pose), getAimBearingDegrees()),
+                                            getPose().heading() + Math.toRadians(turnDegrees), Mode.SPIN_UP),
+                                    settle(AutoConstants.SETTLE_SECONDS, Mode.SPIN_UP));
+                        }
+                    }
+                }),
+                AutoStep.instant("Aim distance", new Runnable() {
+                    @Override
+                    public void run() {
+                        HiveClusterPose pose = getCellPose(cell);
+                        if (pose == null) {
+                            return;
+                        }
+                        double moveCm = aimMoveCm(distanceMeters(pose), getAimDistanceMeters());
+                        if (Math.abs(moveCm) > AutoConstants.AIM_MIN_MOVE_CM) {
+                            getSequence().addNext(
+                                    driveTo(String.format(Locale.US, "Aim distance %.0f cm (%.2f -> %.2f m)",
+                                            moveCm, distanceMeters(pose), getAimDistanceMeters()),
+                                            movedTowardRear(getPose(), moveCm), Mode.SPIN_UP),
+                                    settle(AutoConstants.SETTLE_SECONDS, Mode.SPIN_UP));
+                        }
+                    }
+                }),
+                AutoStep.instant("Aim result", new Runnable() {
+                    @Override
+                    public void run() {
+                        HiveClusterPose pose = getCellPose(cell);
+                        getSequence().note(pose == null ? "Aim: cell out of view after aiming"
+                                : String.format(Locale.US, "Aim: bearing %.1f deg (target %.1f), distance %.2f m (target %.2f)",
+                                bearingDegrees(pose), getAimBearingDegrees(), distanceMeters(pose), getAimDistanceMeters()));
+                    }
+                })));
     }
 
     /** Far start, other cell not seen: down the west lane to the near spot and shoot there. */
@@ -333,7 +398,7 @@ public abstract class ScoringAuto extends AutoBase {
         return steps;
     }
 
-    /** Other-cell spot down the west lane to the shooting spot (turning 180 deg in the lane). */
+    /** Other-cell spot down the west lane to the shooting spot (turning in the lane). */
     private List<AutoStep> otherSpotLegsToShootSpot(Mode mode) {
         return new ArrayList<>(Arrays.asList(
                 driveThrough("North-west of the HIVE", field(NearRoutePoses.NORTH_WAYPOINT), mode),
@@ -341,18 +406,45 @@ public abstract class ScoringAuto extends AutoBase {
                 driveTo("To shoot spot", field(NearRoutePoses.SHOOT_SPOT), mode)));
     }
 
-    /** One diagonal north of the HIVE into PARK (TESTED leg of the other-cell route). */
+    /** One diagonal north of the HIVE into PARK (the park leg of the other-cell route). */
     private List<AutoStep> parkFromOtherSideSteps() {
-        return parkSteps("Park from other side", Arrays.asList(field(NearRoutePoses.OTHER_PARK)), false);
+        return timedParkSteps("Park from other side", otherSideParkWaypoints(), false);
     }
 
     // ------------------------------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------------------------------
 
+    private List<Pose> otherSideParkWaypoints() {
+        return Collections.singletonList(field(NearRoutePoses.OTHER_PARK));
+    }
+
+    /** At the other cell: seen, and a volley longer than the aim still fits before the park. */
     private boolean canShootAtOtherCell() {
-        return wasCellSeen() && getPlanner().isBeforeDeadline(
-                AutoConstants.OTHER_CELL_SHOOT_END_SECONDS - AutoConstants.OTHER_CELL_MIN_SHOOT_SECONDS);
+        List<Pose> parkRoute = new ArrayList<>();
+        parkRoute.add(getPose());
+        parkRoute.addAll(otherSideParkWaypoints());
+        return wasCellSeen() && getPlanner().getVolleyTimeLeft(parkRoute) > AutoConstants.OTHER_CELL_AIM_SECONDS;
+    }
+
+    /**
+     * Time-model check before going to the other cell (vision-align 1e723f2); logs the plan.
+     *
+     * @param waypoints the waypoints from here to the other-cell spot (the last is the spot)
+     * @return true to go, false to park instead
+     */
+    private boolean hasTimeForOtherCell(List<Pose> waypoints) {
+        List<Pose> route = new ArrayList<>();
+        route.add(getPose());
+        route.addAll(waypoints);
+        List<Pose> park = new ArrayList<>();
+        park.add(waypoints.get(waypoints.size() - 1));
+        park.addAll(otherSideParkWaypoints());
+        boolean hasTime = getPlanner().hasTimeForOtherCell(route, park);
+        getSequence().note(String.format(Locale.US, "Other cell plan at %.1f s: parked ~%.1f s (deadline %.1f s) -> %s",
+                getMatchTimer().getElapsedSeconds(), getPlanner().getOtherCellParkedSeconds(route, park),
+                AutoPlanner.getParkDeadlineSeconds(), hasTime ? "GO" : "PARK instead"));
+        return hasTime;
     }
 
     /** @return a supplier of the volley time left before {@code latestEndSeconds}, read at the volley start */
@@ -366,34 +458,74 @@ public abstract class ScoringAuto extends AutoBase {
     }
 
     /**
-     * Limelight distance correction at the other cell (TESTED VA logic): move toward the cell
-     * so the distance matches the one that scored at the first volley, never away from it
-     * (that is toward the FLOWER).
-     *
-     * @return centimeters to move toward the cell (0 if the cell is not measured)
+     * @param parkWaypoints the park legs after the volley (field poses)
+     * @return a supplier of the volley time that still leaves the park by the deadline, read at the volley start
      */
-    private double getVisionApproachCm() {
-        double distanceMeters = cellForwardMeters(HiveCell.getAudienceCell(getAlliance()));
-        if (Double.isNaN(distanceMeters)) {
-            return 0.0;
-        }
-        double referenceMeters = Double.isNaN(shootDistanceMeters)
-                ? AutoConstants.DEFAULT_SHOOT_DISTANCE_METERS : shootDistanceMeters;
-        double targetMeters = referenceMeters - AutoConstants.OTHER_SPOT_SHORTEN_CM / 100.0;
-        double moveCm = (distanceMeters - targetMeters) * 100.0;
-        return Math.max(0.0, Math.min(AutoConstants.VISION_APPROACH_MAX_CM, moveCm));
+    private DoubleSupplier volleyTimeLeft(final List<Pose> parkWaypoints) {
+        return new DoubleSupplier() {
+            @Override
+            public double getAsDouble() {
+                List<Pose> route = new ArrayList<>();
+                route.add(getPose());
+                route.addAll(parkWaypoints);
+                return getPlanner().getVolleyTimeLeft(route);
+            }
+        };
     }
 
-    /** @return the RED other-cell spot moved {@code towardCellCm} toward the HIVE (south) */
-    private static Pose otherSpotMovedTowardCell(double towardCellCm) {
-        Pose spot = NearRoutePoses.OTHER_SPOT;
-        return new Pose(spot.x(), spot.y() - towardCellCm / CM_PER_INCH, spot.heading());
+    private double getAimBearingDegrees() {
+        return Double.isNaN(shootBearingDegrees) ? AutoConstants.DEFAULT_SHOOT_BEARING_DEGREES : shootBearingDegrees;
     }
 
-    /** @return floor distance from the camera to the cell's tags, meters, or NaN if not in view */
-    private double cellForwardMeters(HiveCell cell) {
-        HiveClusterPose pose = getVision().getPose(cell);
-        return pose == null || !getVision().isCellInView(cell) ? Double.NaN : pose.forwardMeters;
+    private double getAimDistanceMeters() {
+        return Double.isNaN(shootDistanceMeters) ? AutoConstants.DEFAULT_SHOOT_DISTANCE_METERS : shootDistanceMeters;
+    }
+
+    /**
+     * @param pose a cell's tag cluster in the camera frame
+     * @return its bearing from the camera axis, degrees (+ = right of the crosshair)
+     */
+    static double bearingDegrees(HiveClusterPose pose) {
+        return Math.toDegrees(Math.atan2(pose.strafeMeters, pose.forwardMeters));
+    }
+
+    /**
+     * @param pose a cell's tag cluster in the camera frame
+     * @return camera-to-cell floor distance, meters
+     */
+    static double distanceMeters(HiveClusterPose pose) {
+        return Math.hypot(pose.forwardMeters, pose.strafeMeters);
+    }
+
+    /**
+     * @param bearingDegrees       bearing of the cell now
+     * @param targetBearingDegrees bearing that scored
+     * @return the aim turn, degrees counter-clockwise, limited to {@code AIM_MAX_TURN_DEGREES}
+     */
+    static double aimTurnDegrees(double bearingDegrees, double targetBearingDegrees) {
+        double turn = AutoConstants.AIM_TURN_SIGN * (bearingDegrees - targetBearingDegrees);
+        return Math.max(-AutoConstants.AIM_MAX_TURN_DEGREES, Math.min(AutoConstants.AIM_MAX_TURN_DEGREES, turn));
+    }
+
+    /**
+     * @param distanceMeters       camera-to-cell distance now
+     * @param targetDistanceMeters distance that scored
+     * @return the move toward the cell, cm (negative = away from it, toward the FLOWER), limited
+     */
+    static double aimMoveCm(double distanceMeters, double targetDistanceMeters) {
+        double moveCm = (distanceMeters - targetDistanceMeters) * CM_PER_METER;
+        return Math.max(-AutoConstants.AIM_MAX_AWAY_CM, Math.min(AutoConstants.AIM_MAX_TOWARD_CM, moveCm));
+    }
+
+    /**
+     * @param pose   field pose of the robot
+     * @param moveCm distance to move toward the rear (the launcher and the Limelight face the cell)
+     * @return the field pose {@code moveCm} behind {@code pose}, same heading
+     */
+    static Pose movedTowardRear(Pose pose, double moveCm) {
+        double moveInches = moveCm / CM_PER_INCH;
+        return new Pose(pose.x() - Math.cos(pose.heading()) * moveInches,
+                pose.y() - Math.sin(pose.heading()) * moveInches, pose.heading());
     }
 
     /**
@@ -402,13 +534,15 @@ public abstract class ScoringAuto extends AutoBase {
      * @return seconds
      */
     static double estimateNearCycleSeconds() {
-        double slowCollect = AutoConstants.COLLECT_POWER / DriveConstants.AUTO_MAX_POWER;
-        double slowReturn = Math.min(1.0, AutoConstants.RETURN_POWER / DriveConstants.AUTO_MAX_POWER);
         double toBalls = AutoPlanner.estimateLegSeconds(
                 distance(NearRoutePoses.SHOOT_SPOT, NearRoutePoses.COLLECT_START));
-        double overBalls = slowLeg(distance(NearRoutePoses.COLLECT_START, NearRoutePoses.COLLECT_END), slowCollect);
-        double back = slowLeg(distance(NearRoutePoses.COLLECT_END, NearRoutePoses.SHOOT_SPOT), slowReturn);
-        return 2.0 * AutoPlanner.estimateTurnSeconds(AutoConstants.COLLECT_TURN_DEGREES)
+        double overBalls = AutoPlanner.estimateLegSeconds(
+                distance(NearRoutePoses.COLLECT_START, NearRoutePoses.COLLECT_END), AutoConstants.COLLECT_POWER);
+        double back = AutoPlanner.estimateLegSeconds(
+                distance(NearRoutePoses.COLLECT_END, NearRoutePoses.SHOOT_SPOT),
+                Math.min(DriveConstants.AUTO_MAX_POWER, AutoConstants.RETURN_POWER));
+        return AutoConstants.ESTIMATE_ROUTE_FIXED_SECONDS
+                + 2.0 * AutoPlanner.estimateTurnSeconds(AutoConstants.COLLECT_TURN_DEGREES)
                 + toBalls + overBalls + back + AutoPlanner.estimateLegSeconds(0.0)
                 + 2.0 * AutoConstants.SETTLE_SECONDS + AutoConstants.TIP_CHECK_SECONDS
                 + AutoPlanner.estimateShootSeconds(AutoConstants.CYCLE_MIN_PLANNED_BALLS);
@@ -422,13 +556,10 @@ public abstract class ScoringAuto extends AutoBase {
 
     /** @return seconds from the other-cell spot down the west lane to the shooting spot */
     static double estimateOtherSpotToShootSpotSeconds() {
+        double turnDegrees = Math.abs(NearRoutePoses.OTHER_HEADING_DEG - NearRoutePoses.START_HEADING_DEG);
         return AutoPlanner.estimateLegsSeconds(Arrays.asList(NearRoutePoses.OTHER_SPOT,
                 NearRoutePoses.NORTH_WAYPOINT, NearRoutePoses.SOUTH_WAYPOINT, NearRoutePoses.SHOOT_SPOT))
-                + AutoPlanner.estimateTurnSeconds(HALF_TURN_DEGREES);
-    }
-
-    private static double slowLeg(double inches, double speedFraction) {
-        return inches / (AutoConstants.CRUISE_INCHES_PER_SECOND * speedFraction) + AutoConstants.LEG_OVERHEAD_SECONDS;
+                + AutoPlanner.estimateTurnSeconds(turnDegrees);
     }
 
     private static double distance(Pose a, Pose b) {

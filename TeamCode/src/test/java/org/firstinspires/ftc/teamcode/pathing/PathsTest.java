@@ -178,13 +178,15 @@ public class PathsTest {
         // docs/AUDIT_PEDRO.md section 7.3 (converted from the tested cm legs)
         assertPose(NearRoutePoses.SHOOT_SPOT, 57.000, 12.937);
         assertPose(NearRoutePoses.WEST_LANE_SOUTH, 33.378, 14.906);
-        assertPose(NearRoutePoses.WEST_LANE_NORTH, 33.378, 105.457);
+        assertPose(NearRoutePoses.WEST_LANE_NORTH, 33.378, 95.417);
         // PARK moved from the TESTED x 9.756 to 2 in off the wall (team decision, RIGHT_2_CM 60 -> 56.5)
-        assertPose(NearRoutePoses.PARK, 11.134, 105.457);
-        assertPose(NearRoutePoses.COLLECT_END, 9.756, 12.937);
+        assertPose(NearRoutePoses.PARK, 11.134, 95.417);
+        assertPose(NearRoutePoses.COLLECT_START, 29.047, 9.394);
+        assertPose(NearRoutePoses.COLLECT_END, 9.756, 9.394);
         assertPose(NearRoutePoses.COLLECT_EXIT, 23.929, 29.866);
         assertPose(NearRoutePoses.NORTH_WAYPOINT, 33.378, 110.181);
-        assertPose(NearRoutePoses.OTHER_SPOT, 57.000, 125.157);
+        assertPose(NearRoutePoses.OTHER_SPOT, 46.764, 118.449);
+        assertEquals(0.0, OdometryDriver.angleError(Math.toRadians(115.0), NearRoutePoses.OTHER_SPOT.heading()), 1e-9);
         // Pedro stores headings in [0, 2 pi): -90 degrees reads as 270
         assertEquals(0.0, OdometryDriver.angleError(Math.toRadians(-90.0), NearRoutePoses.PARK.heading()), 1e-9);
     }

@@ -1,4 +1,4 @@
-// Sources: new for IronLion30311-HiveMind (tests for TerritoryGuard, EmergencyPark, GuardedLeaveMove, AutoSafePark and ScoringAuto estimates)
+// Sources: new for IronLion30311-HiveMind (tests for TerritoryGuard, EmergencyPark, GuardedLeaveMove, AutoSafePark and ScoringAuto estimates and aim helpers)
 package org.firstinspires.ftc.teamcode.opmodes.auto;
 
 import static org.junit.Assert.assertEquals;
@@ -62,6 +62,41 @@ public class AutoSafetyTest {
                 TerritoryGuard.isPastLine(Alliance.rotate180(NearRoutePoses.SHOOT_SPOT), Alliance.BLUE));
     }
 
+    // ---------------- Limelight aim (vision-align 4fd2293 / f26f8d0) ----------------
+
+    @Test
+    public void aimTurnIsSignedAndLimited() {
+        // A cell right of where it scored needs a clockwise (negative) turn with AIM_TURN_SIGN -1
+        double turn = ScoringAuto.aimTurnDegrees(20.0, 10.0);
+        assertEquals(AutoConstants.AIM_TURN_SIGN * 10.0, turn, EPSILON);
+        assertEquals(AutoConstants.AIM_MAX_TURN_DEGREES,
+                Math.abs(ScoringAuto.aimTurnDegrees(90.0, 0.0)), EPSILON);
+    }
+
+    @Test
+    public void aimMoveNeverGoesFarTowardTheFlower() {
+        assertEquals(AutoConstants.AIM_MAX_TOWARD_CM, ScoringAuto.aimMoveCm(3.0, 1.2), EPSILON);
+        assertEquals(-AutoConstants.AIM_MAX_AWAY_CM, ScoringAuto.aimMoveCm(0.5, 1.2), EPSILON);
+        assertEquals(10.0, ScoringAuto.aimMoveCm(1.32, 1.22), 1e-6);
+    }
+
+    @Test
+    public void aimMoveGoesTowardTheRear() {
+        Pose facingNorth = new Pose(40.0, 100.0, Math.toRadians(90.0));
+        Pose moved = ScoringAuto.movedTowardRear(facingNorth, 2.54 * 10.0);
+        assertEquals(40.0, moved.x(), 1e-9);
+        assertEquals(90.0, moved.y(), 1e-9);
+        assertEquals(facingNorth.heading(), moved.heading(), 1e-12);
+    }
+
+    @Test
+    public void otherCellSpotIsLegal() {
+        Pose spot = NearRoutePoses.OTHER_SPOT;
+        assertFalse("G402", TerritoryGuard.isPastLine(spot, Alliance.RED));
+        assertTrue("clear of the HIVE box", spot.y() - TerritoryGuard.getHalfReachX(spot.heading() - Math.PI / 2.0)
+                > FieldConstants.HIVE_MAX_Y);
+    }
+
     // ---------------- Emergency park ----------------
 
     @Test
@@ -73,10 +108,16 @@ public class AutoSafetyTest {
                 Pose last = alliance.toField(plan.get(plan.size() - 1));
                 assertEquals(NearRoutePoses.PARK.x(), last.x(), EPSILON);
                 assertEquals(NearRoutePoses.PARK.y(), last.y(), EPSILON);
-                for (Pose waypoint : plan) {
+                // No turn on the way; only the PARK leg squares an angled heading to the walls
+                for (int i = 0; i < plan.size() - 1; i++) {
                     assertEquals("No turn while parking", 0.0,
-                            Alliance.normalizeRadians(waypoint.heading() - field.heading()), EPSILON);
+                            Alliance.normalizeRadians(plan.get(i).heading() - field.heading()), EPSILON);
                 }
+                double square = EmergencyPark.squareHeading(field.heading());
+                assertEquals("PARK square to the walls", 0.0,
+                        Alliance.normalizeRadians(plan.get(plan.size() - 1).heading() - square), EPSILON);
+                assertTrue("at most a 45 deg turn on the last leg",
+                        Math.abs(Alliance.normalizeRadians(square - field.heading())) <= Math.PI / 4.0 + EPSILON);
             }
         }
     }
