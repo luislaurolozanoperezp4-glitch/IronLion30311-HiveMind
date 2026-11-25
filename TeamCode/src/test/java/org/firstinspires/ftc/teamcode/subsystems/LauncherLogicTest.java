@@ -1,4 +1,4 @@
-// Sources: new for IronLion30311-HiveMind (tests the vision-align Shooter readiness, voltage compensation and ShotTracker logic @ a7b8f4c)
+// Sources: new for IronLion30311-HiveMind (tests the vision-align Shooter readiness, voltage compensation and ShotTracker logic @ a7b8f4c; feed window @ 19de992; pollen idle @ 854de85)
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import static org.junit.Assert.assertEquals;
@@ -19,6 +19,35 @@ public class LauncherLogicTest {
         assertTrue(Launcher.updateReady(true, true, TARGET - 150, TARGET));
         assertFalse(Launcher.updateReady(true, true, TARGET - 250, TARGET));
         assertFalse(Launcher.updateReady(true, false, TARGET, TARGET));
+    }
+
+    @Test
+    public void feedWindowIsAsymmetric() {
+        // Becomes ready only inside [target - READY_BELOW_RPM, target + READY_ABOVE_RPM]
+        double below = LauncherConstants.READY_BELOW_RPM;
+        double above = LauncherConstants.READY_ABOVE_RPM;
+        assertFalse(Launcher.updateReady(false, true, TARGET - below - 10, TARGET));
+        assertTrue(Launcher.updateReady(false, true, TARGET - below, TARGET));
+        assertTrue(Launcher.updateReady(false, true, TARGET + above, TARGET));
+        assertFalse(Launcher.updateReady(false, true, TARGET + above + 10, TARGET));
+        // Once ready, only a dip beyond NOT_READY_TOLERANCE_RPM ends it (either side)
+        assertTrue(Launcher.updateReady(true, true, TARGET + above + 10, TARGET));
+        assertFalse(Launcher.updateReady(true, true,
+                TARGET + LauncherConstants.NOT_READY_TOLERANCE_RPM + 1, TARGET));
+    }
+
+    @Test
+    public void pollenIdleIsNeverReadyAndStopTurnsItOff() {
+        Launcher launcher = new Launcher(null, null, () -> 12.0,
+                new org.firstinspires.ftc.teamcode.testutil.FakeClock());
+        launcher.setPollenIdle(true);
+        launcher.periodic();
+        assertTrue(launcher.isPollenIdleEnabled());
+        assertEquals(Launcher.FlywheelState.IDLE, launcher.getPollenState());
+        assertFalse(launcher.isPollenReady());
+        assertFalse(launcher.isFiring());
+        launcher.stop();
+        assertFalse(launcher.isPollenIdleEnabled());
     }
 
     @Test

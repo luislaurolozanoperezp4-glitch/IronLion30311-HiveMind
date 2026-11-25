@@ -1,4 +1,4 @@
-// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/pathing/PoseLogger.java @ a7b8f4c (start, setOrigin, update, event, robotFrameMoveCm, close, getFileName) — adapted for BIOBUZZ (pose columns only; vision and ball columns removed)
+// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/pathing/PoseLogger.java @ a7b8f4c (start, setOrigin, update, event, robotFrameMoveCm, close, getFileName) @ 023ae35 (Pinpoint health columns) — adapted for BIOBUZZ (pose columns only; vision and ball columns removed)
 package org.firstinspires.ftc.teamcode.pathing;
 
 import com.pedropathing.math.Pose;
@@ -19,8 +19,9 @@ import java.util.Locale;
  * <p>
  * Each row: time, field x/y/heading, move from the start in the start's robot frame
  * ({@code fwd_cm}, {@code right_cm}, compare with a tape measure), the target and the distance to
- * it, and the routine step. {@link #event} rows (for example the end of each leg) are written at
- * once. A logging error never stops the OpMode.
+ * it, the Pinpoint health ({@link PinpointDiagnostics}: status, loop frequency, raw pod counts;
+ * empty without {@link #setPinpointDiagnostics}), and the routine step. {@link #event} rows (for
+ * example the end of each leg) are written at once. A logging error never stops the OpMode.
  */
 public class PoseLogger {
 
@@ -35,6 +36,7 @@ public class PoseLogger {
     private BufferedWriter writer;
     private File logFile;
     private Pose origin;
+    private PinpointDiagnostics pinpointDiagnostics;
 
     /**
      * Opens a new timestamped CSV file; call once after START.
@@ -54,7 +56,8 @@ public class PoseLogger {
             logFile = new File(dir, "pose_" + tag.replaceAll("[^A-Za-z0-9]", "") + "_" + timestamp + ".csv");
             writer = new BufferedWriter(new FileWriter(logFile));
             writer.write("time_sec,x_in,y_in,heading_deg,fwd_cm,right_cm,"
-                    + "target_x_in,target_y_in,target_heading_deg,error_cm,step\n");
+                    + "target_x_in,target_y_in,target_heading_deg,error_cm,"
+                    + "pinpoint_status,pinpoint_hz,pinpoint_enc_x,pinpoint_enc_y,step\n");
             sessionTimer.reset();
             sampleTimer.reset();
             flushTimer.reset();
@@ -71,6 +74,15 @@ public class PoseLogger {
      */
     public void setOrigin(Pose origin) {
         this.origin = origin;
+    }
+
+    /**
+     * Sets the Pinpoint health source for the pinpoint_* columns (they stay empty without it).
+     *
+     * @param pinpointDiagnostics the diagnostics, or null
+     */
+    public void setPinpointDiagnostics(PinpointDiagnostics pinpointDiagnostics) {
+        this.pinpointDiagnostics = pinpointDiagnostics;
     }
 
     /**
@@ -118,6 +130,7 @@ public class PoseLogger {
             line.append(String.format(Locale.US, ",%.2f,%.2f,%.1f,%.1f", target.x(), target.y(),
                     Math.toDegrees(target.heading()), OdometryDriver.distance(pose, target) * CM_PER_INCH));
         }
+        line.append(',').append(pinpointDiagnostics == null ? ",,," : pinpointDiagnostics.csvFields());
         line.append(',').append(step == null ? "" : step.replace(',', ';')).append('\n');
         try {
             writer.write(line.toString());

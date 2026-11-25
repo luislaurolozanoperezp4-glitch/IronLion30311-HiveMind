@@ -93,8 +93,11 @@ public final class FieldConstants {
     // ---------------- RED scoring spots ----------------
     /** TESTED: shoot the first cell from here. */
     public static final Pose NEAR_SHOOT = new Pose(57.0, 12.9, Math.toRadians(-90.0));
-    /** FITTED: the second ("other") cell shooting spot. TODO: TUNE */
-    public static final Pose OTHER_SHOOT = new Pose(57.0, 125.2, Math.toRadians(90.0));
+    /**
+     * FITTED: the second ("other") cell shooting spot, angled toward our AUDIENCE cell
+     * (vision-align 4fd2293; same as {@code NearRoutePoses.OTHER_SPOT}). TODO: TUNE
+     */
+    public static final Pose OTHER_SHOOT = new Pose(46.764, 118.449, Math.toRadians(115.0));
 
     /**
      * Default PARK target: robot side {@link #WALL_CLEARANCE_INCHES} off the red wall (LEAVE)

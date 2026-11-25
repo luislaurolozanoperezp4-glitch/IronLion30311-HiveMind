@@ -1,5 +1,7 @@
 // Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/teleop/MainTeleOp.java @ a7b8f4c (button mapping, brake rumble, ball assist, align-while-firing, feed only when ready and aimed, jam rumble, low-battery rumble, light logic, shot marks, telemetry)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/teleop/MainTeleOp.java @ 023ae35 (ball assist only while driving forward) @ 854de85 (pollen idle spin toggle, off on low battery)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/mar/duopodriveNcam / TeamCode/.../PinpointOdometry.java @ 2d92fba (saved AUTO pose idea, via util.PoseStorage)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/teleop/MainTeleOp.java @ 344254b (FLOWER sweeper toggle; gamepad2 A there, gamepad1 B here)
 //          — adapted for BIOBUZZ (iterative OpMode, subsystems + ShootingSequence, G407/G408/G410 wiring, endgame alerts, competition telemetry, match CSV log)
 package org.firstinspires.ftc.teamcode.opmodes.teleop;
 
@@ -11,6 +13,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.config.ControlConstants;
+import org.firstinspires.ftc.teamcode.config.FlowerSweeperConstants;
 import org.firstinspires.ftc.teamcode.config.LauncherConstants;
 import org.firstinspires.ftc.teamcode.config.MatchConstants;
 import org.firstinspires.ftc.teamcode.config.RobotConstants;
@@ -22,7 +25,7 @@ import org.firstinspires.ftc.teamcode.subsystems.BatteryMonitor;
 import org.firstinspires.ftc.teamcode.subsystems.ColorSensing;
 import org.firstinspires.ftc.teamcode.subsystems.Drivetrain;
 import org.firstinspires.ftc.teamcode.subsystems.ElementCounter;
-import org.firstinspires.ftc.teamcode.subsystems.FlowerArm;
+import org.firstinspires.ftc.teamcode.subsystems.FlowerSweeper;
 import org.firstinspires.ftc.teamcode.subsystems.Indexer;
 import org.firstinspires.ftc.teamcode.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.Launcher;
@@ -48,14 +51,16 @@ import java.util.function.DoubleSupplier;
  * The competition TeleOp. {@link TeleOpRed} and {@link TeleOpBlue} only pick the alliance.
  * <p>
  * <b>gamepad1 (driver):</b> left stick drive, right stick X turn (cubic shaping), LT hold =
- * brake, A = slow, Y = fast, LB hold = collect (with ball assist), RB hold = eject,
- * B = flower arm (only in ENDGAME, G410), X = reset the element count (if the G407 counter is
- * wrong), BACK = field-centric on/off.
+ * brake, A = slow, Y = fast, LB hold = collect (ball assist only while driving forward), RB
+ * hold = eject, B = FLOWER sweeper down / up (lowering locked until ENDGAME while
+ * {@code FlowerSweeperConstants.LOCK_DOWN_UNTIL_NECTAR_UNLOCK}), X = reset the element count (if
+ * the G407 counter is wrong), BACK = field-centric on/off.
  * <p>
  * <b>gamepad2 (operator):</b> RT hold = fire POLLEN, LT hold = fire NECTAR, RB / LB hold =
  * reverse POLLEN / NECTAR, D-pad up/down = POLLEN RPM +/-, right/left = NECTAR RPM +/-,
  * X / Y / B = mark the last shot SHORT / LONG / WIDE, A = auto-shoot volley (tap again to
- * cancel), BACK = COMPETITION / DEBUG telemetry.
+ * cancel), right stick button = POLLEN idle spin on / off (on at START, off on low battery),
+ * BACK = COMPETITION / DEBUG telemetry.
  * <p>
  * Full table and the reasons for each change: {@code docs/agents/teleop.md}.
  * <p>
@@ -69,7 +74,8 @@ public abstract class TeleOpBase extends OpMode {
     private static final String MATCH_LOG_FOLDER = "match_logs";
     private static final String MATCH_LOG_HEADER = "time_s,remaining_s,phase,battery_v,"
             + "pollen_target_rpm,pollen_rpm,nectar_target_rpm,nectar_rpm,pollen_shots,"
-            + "nectar_shots,intake,indexer,elements,auto_shoot,x_in,y_in,heading_deg,event";
+            + "nectar_shots,intake,indexer,elements,auto_shoot,x_in,y_in,heading_deg,intake_unjams,"
+            + "pollen_idle,event";
 
     /** How the last shot missed, marked by the operator for the log. */
     private enum ShotMark { SHORT, LONG, WIDE }
@@ -86,7 +92,7 @@ public abstract class TeleOpBase extends OpMode {
     private HiveAligner aligner;
     private Lights lights;
     private BatteryMonitor battery;
-    private FlowerArm flowerArm;
+    private FlowerSweeper sweeper;
     private ShootingSequence autoShoot;
     private List<Subsystem> subsystems;
     private PinpointLocalizer localizer;
@@ -114,6 +120,7 @@ public abstract class TeleOpBase extends OpMode {
     private boolean wasStoppedForOpponentNectar = false;
     private boolean hasTarget = false;
     private boolean isFeedingNow = false;
+    private boolean isPollenIdleWanted = false;
     private final int[] markCounts = new int[ShotMark.values().length];
     private String pendingEvent = "";
     private double loopMillis = 0.0;
@@ -149,13 +156,13 @@ public abstract class TeleOpBase extends OpMode {
         vision = new Vision(hardware, alliance);
         aligner = new HiveAligner(vision.getHiveVision(), drivetrain);
         lights = new Lights(hardware);
-        flowerArm = new FlowerArm(hardware);
+        sweeper = new FlowerSweeper(hardware);
         autoShoot = ShootingSequence.forRobot(launcher, indexer, intake);
 
         // Order matters: sensors first, ElementCounter after ColorSensing and Launcher, the
         // intake after the gates it reads, lights last.
         subsystems = Arrays.<Subsystem>asList(battery, colorSensing, launcher, elementCounter,
-                vision, intake, indexer, drivetrain, flowerArm, lights);
+                vision, intake, indexer, drivetrain, sweeper, lights);
 
         wireRules();
         drivetrain.setBatteryMonitor(battery);
@@ -166,7 +173,7 @@ public abstract class TeleOpBase extends OpMode {
         lights.showAlliance(alliance);
     }
 
-    /** G407 collect gate, G408 stop for opponent NECTAR, G410 flower arm gate. */
+    /** G407 collect gate, G408 stop for opponent NECTAR, sweeper lowering gate (G410 unlock). */
     private void wireRules() {
         final ElementCounter counter = elementCounter;
         intake.setCollectGate(new BooleanSupplier() {
@@ -184,10 +191,11 @@ public abstract class TeleOpBase extends OpMode {
             }
         });
         final MatchTimer timer = matchTimer;
-        flowerArm.setDeployGate(new BooleanSupplier() {
+        sweeper.setDownGate(new BooleanSupplier() {
             @Override
             public boolean getAsBoolean() {
-                return timer.canPlaceNectar();
+                // Conservative team policy: FLOWER play only once G410 unlocks (Dashboard switch)
+                return !FlowerSweeperConstants.LOCK_DOWN_UNTIL_NECTAR_UNLOCK || timer.canPlaceNectar();
             }
         });
         autoShoot.setAimedSupplier(new BooleanSupplier() {
@@ -255,7 +263,7 @@ public abstract class TeleOpBase extends OpMode {
                 colorSensing.isConnected() ? "OK" : "MISSING");
         telemetry.addData("Odometry", odometryText);
         telemetry.addData("Pose handoff", handoffText);
-        telemetry.addData("Flower arm", flowerArm.isAvailable() ? "OK" : "not configured (optional)");
+        telemetry.addData("Flower sweeper", sweeper.isConnected() ? "OK" : "not configured (optional)");
         telemetry.addData("HIVE auto-align", aligner.isEnabled() ? "ON" : "off (VisionConstants)");
         battery.addTelemetry(telemetry);
         telemetry.update();
@@ -266,6 +274,8 @@ public abstract class TeleOpBase extends OpMode {
     public void start() {
         matchTimer.start();
         endgameAlerts.reset();
+        // POLLEN idle spin starts at START, never in INIT (G403: no powered movement before).
+        isPollenIdleWanted = LauncherConstants.POLLEN_IDLE_AT_START;
         // G407: start from what AUTO left on board; without AUTO the robot still holds its preload.
         elementCounter.setCount(TeleOpLogic.initialElementCount(
                 PoseStorage.getElementCount(-1)));
@@ -362,8 +372,14 @@ public abstract class TeleOpBase extends OpMode {
             pendingEvent = "element_count_reset";
         }
         if (driver.wasJustPressed(Button.B)) {
-            toggleFlowerArm();
+            toggleSweeper();
         }
+        if (operator.wasJustPressed(Button.RIGHT_STICK_BUTTON)) {
+            isPollenIdleWanted = !isPollenIdleWanted;
+            pendingEvent = isPollenIdleWanted ? "pollen_idle_on" : "pollen_idle_off";
+        }
+        // The idle spin also turns off while the battery is low.
+        launcher.setPollenIdle(isPollenIdleWanted && !battery.isLow());
         if (operator.wasJustPressed(Button.DPAD_UP)) {
             launcher.adjustPollenRpm(LauncherConstants.RPM_STEP);
         } else if (operator.wasJustPressed(Button.DPAD_DOWN)) {
@@ -383,13 +399,12 @@ public abstract class TeleOpBase extends OpMode {
         }
     }
 
-    /** Flower arm on gamepad1 B: retract if out, else deploy (refused before ENDGAME, G410). */
-    private void toggleFlowerArm() {
-        if (flowerArm.isDeployed()) {
-            flowerArm.retract();
-        } else if (!flowerArm.deploy()) {
-            driver.rumbleShort(); // locked until the last 60 s
+    /** FLOWER sweeper on gamepad1 B: raise if down, else lower (rumble if the gate refuses). */
+    private void toggleSweeper() {
+        if (!sweeper.toggle()) {
+            driver.rumbleShort(); // lowering locked until the last 60 s
         }
+        pendingEvent = "sweeper_" + sweeper.getState().name().toLowerCase(Locale.US);
     }
 
     /** Drive, aim, intake, launcher, indexer and auto-shoot. */
@@ -446,8 +461,10 @@ public abstract class TeleOpBase extends OpMode {
             if (wasAligning) {
                 aligner.reset();
             }
-            // Ball assist: while collecting and not turning, turn toward the closest ball.
-            if (isCollect && turn == 0.0) {
+            // Ball assist: only while collecting AND driving forward onto balls, never while a
+            // launcher is used (it turned the robot on its own at the shooting spot).
+            boolean isUsingLauncher = isFiring || isReversePollen || isReverseNectar;
+            if (TeleOpLogic.shouldBallAssist(isCollect, forward, turn, isUsingLauncher)) {
                 turn = colorSensing.getAssistTurn(TeleOpLogic.assistColors(alliance));
             }
             if (isFieldCentric) {
@@ -584,7 +601,8 @@ public abstract class TeleOpBase extends OpMode {
                     intake.getState(), indexer.getState(), elementCounter.getCount(),
                     autoShoot.getState(),
                     pose == null ? "" : pose.x(), pose == null ? "" : pose.y(),
-                    pose == null ? "" : Math.toDegrees(pose.heading()), pendingEvent);
+                    pose == null ? "" : Math.toDegrees(pose.heading()), intake.getUnjamCount(),
+                    launcher.isPollenIdleEnabled() ? 1 : 0, pendingEvent);
             pendingEvent = "";
         }
         if (Double.isNaN(lastLogFlushSec)
@@ -607,9 +625,9 @@ public abstract class TeleOpBase extends OpMode {
     private void addBanner() {
         String clock = TeleOpLogic.formatClock(matchTimer.getRemainingSeconds());
         if (matchTimer.canPlaceNectar()) {
-            telemetry.addLine("*** ENDGAME " + clock + " - NECTAR + flower arm allowed ***");
+            telemetry.addLine("*** ENDGAME " + clock + " - NECTAR + FLOWER sweeper allowed ***");
         } else if (matchTimer.isEndgame()) {
-            telemetry.addLine("*** ENDGAME " + clock + " - flower arm unlocks in a moment (G410) ***");
+            telemetry.addLine("*** ENDGAME " + clock + " - FLOWER sweeper unlocks in a moment (G410) ***");
         } else {
             telemetry.addLine(alliance + " TELEOP " + clock + " (endgame at "
                     + TeleOpLogic.formatClock(MatchConstants.NECTAR_UNLOCK_SECONDS) + ")");
@@ -637,6 +655,9 @@ public abstract class TeleOpBase extends OpMode {
     private void addCompetitionTelemetry() {
         telemetry.addData("POLLEN", "%.0f / %.0f RPM%s", launcher.getPollenRpm(),
                 launcher.getPollenTargetRpm(), launcher.isPollenReady() ? " READY" : "");
+        telemetry.addData("POLLEN idle", launcher.isPollenIdleEnabled()
+                ? "ON (gamepad2 RS button = off)"
+                : isPollenIdleWanted ? "OFF: battery low" : "OFF (gamepad2 RS button = on)");
         telemetry.addData("Elements", "%d / %d%s", elementCounter.getCount(),
                 MatchConstants.MAX_CONTROLLED_ELEMENTS,
                 intake.isFull() ? " FULL (gamepad1 X resets)" : "");
@@ -648,8 +669,9 @@ public abstract class TeleOpBase extends OpMode {
             telemetry.addData("Auto-shoot", "%s, %d shots", autoShoot.getState(),
                     autoShoot.getShotsFired());
         }
-        if (flowerArm.isDeployed()) {
-            telemetry.addLine("Flower arm DEPLOYED");
+        if (sweeper.isConnected() && sweeper.getState() != FlowerSweeper.State.NOT_SET
+                && sweeper.getState() != FlowerSweeper.State.UP) {
+            telemetry.addData("Flower sweeper", sweeper.getState());
         }
     }
 

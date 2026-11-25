@@ -1,6 +1,7 @@
 // Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../RobotHardware.java @ a7b8f4c (constructor, getDevice with legacy names, motor setup, optional cameras)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch master / TeamCode/.../RobotHardware.java @ 37b7a16 (pinpoint lookup)
-//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/renata/flower-arm / TeamCode/.../RobotHardware.java @ 889102d (flower arm servos)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/pathing/PinpointDiagnostics.java @ 023ae35 (Pinpoint device kept for the health read)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../RobotHardware.java @ 344254b (sweeper servos as ServoImplEx with the goBILDA 500-2500 us range; replaces the feature/renata/flower-arm servos @ 889102d)
 //          — adapted for BIOBUZZ (fault tolerant: missing devices give warnings, MANUAL bulk caching)
 package org.firstinspires.ftc.teamcode.hardware;
 
@@ -12,12 +13,14 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.PwmControl;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.ServoImplEx;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.config.DriveConstants;
-import org.firstinspires.ftc.teamcode.config.FlowerArmConstants;
+import org.firstinspires.ftc.teamcode.config.FlowerSweeperConstants;
 import org.firstinspires.ftc.teamcode.config.IndexerConstants;
 import org.firstinspires.ftc.teamcode.config.IntakeConstants;
 import org.firstinspires.ftc.teamcode.config.LauncherConstants;
@@ -62,9 +65,10 @@ public class RobotHardware {
     /** Optional second light for the NECTAR alert (decision D12). */
     public final Servo nectarAlertLight;
 
-    // ---------------- Optional flower arm (decision D14) ----------------
-    public final Servo flowerArmLeftServo;
-    public final Servo flowerArmRightServo;
+    // ---------------- Optional FLOWER sweeper (vision-align 344254b) ----------------
+    /** Mirrored goBILDA Dual Mode servos of the FLOWER sweeper bar, or null. */
+    public final ServoImplEx sweeperLeftServo;
+    public final ServoImplEx sweeperRightServo;
 
     // ---------------- Sensors and cameras ----------------
     public final VoltageSensor batteryVoltageSensor;
@@ -72,6 +76,11 @@ public class RobotHardware {
     public final Limelight3A limelight;
     /** HuskyLens on the front (intake side), for POLLEN and NECTAR by color. */
     public final HuskyLens huskyLens;
+    /**
+     * goBILDA Pinpoint, or null. Pedro Pathing owns it (pose); only
+     * {@code pathing.PinpointDiagnostics} reads its status here. Never set its pose from here.
+     */
+    public final GoBildaPinpointDriver pinpoint;
 
     private final HardwareMap hardwareMap;
     private final List<LynxModule> hubs;
@@ -127,15 +136,18 @@ public class RobotHardware {
                 RobotConstants.INDICATOR_LIGHT_LEGACY);
         nectarAlertLight = getOptionalDevice(Servo.class, RobotConstants.NECTAR_ALERT_LIGHT);
 
-        flowerArmLeftServo = getOptionalDevice(Servo.class, RobotConstants.FLOWER_ARM_LEFT_SERVO,
-                RobotConstants.FLOWER_ARM_LEFT_SERVO_LEGACY);
-        flowerArmRightServo = getOptionalDevice(Servo.class,
-                RobotConstants.FLOWER_ARM_RIGHT_SERVO, RobotConstants.FLOWER_ARM_RIGHT_SERVO_LEGACY);
-        if (flowerArmLeftServo != null) {
-            flowerArmLeftServo.setDirection(FlowerArmConstants.LEFT_DIRECTION);
+        // FLOWER sweeper: the full 300 deg of the goBILDA Dual Mode servos needs 500-2500 us
+        sweeperLeftServo = getOptionalDevice(ServoImplEx.class, RobotConstants.SWEEPER_LEFT_SERVO,
+                RobotConstants.SWEEPER_LEFT_SERVO_LEGACY);
+        sweeperRightServo = getOptionalDevice(ServoImplEx.class, RobotConstants.SWEEPER_RIGHT_SERVO,
+                RobotConstants.SWEEPER_RIGHT_SERVO_LEGACY);
+        PwmControl.PwmRange sweeperRange = new PwmControl.PwmRange(
+                FlowerSweeperConstants.PWM_MIN_MICROSECONDS, FlowerSweeperConstants.PWM_MAX_MICROSECONDS);
+        if (sweeperLeftServo != null) {
+            sweeperLeftServo.setPwmRange(sweeperRange);
         }
-        if (flowerArmRightServo != null) {
-            flowerArmRightServo.setDirection(FlowerArmConstants.RIGHT_DIRECTION);
+        if (sweeperRightServo != null) {
+            sweeperRightServo.setPwmRange(sweeperRange);
         }
 
         batteryVoltageSensor = findVoltageSensor();
@@ -143,7 +155,8 @@ public class RobotHardware {
         huskyLens = getDevice(HuskyLens.class, RobotConstants.HUSKY_LENS);
 
         // Pedro Pathing owns the Pinpoint; here we only check that it is configured.
-        hasPinpoint = hardwareMap.tryGet(GoBildaPinpointDriver.class, RobotConstants.PINPOINT) != null;
+        pinpoint = tryGet(GoBildaPinpointDriver.class, RobotConstants.PINPOINT);
+        hasPinpoint = pinpoint != null;
         if (!hasPinpoint) {
             warnings.add("Missing pinpoint \"" + RobotConstants.PINPOINT + "\" (odometry)");
         }
@@ -255,9 +268,9 @@ public class RobotHardware {
         return nectarAlertLight != null;
     }
 
-    /** @return true if both flower arm servos were found */
-    public boolean hasFlowerArm() {
-        return flowerArmLeftServo != null && flowerArmRightServo != null;
+    /** @return true if both FLOWER sweeper servos were found */
+    public boolean hasFlowerSweeper() {
+        return sweeperLeftServo != null && sweeperRightServo != null;
     }
 
     /** @return true if the Limelight was found */

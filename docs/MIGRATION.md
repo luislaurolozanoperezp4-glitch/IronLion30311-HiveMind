@@ -20,11 +20,12 @@ hand-offs in `docs/agents/`, and `docs/BEST_OF_MATRIX.md`.
 | Short | Branch @ commit (date) | What it was |
 |---|---|---|
 | `VA` | `feature/turrubiates/vision-align` @ `a7b8f4c` (2026-11-24) | Field-tested robot code. **Base (decision D18).** |
+| `VA+` | `feature/turrubiates/vision-align` @ `d93cec3` (2026-11-24, = `master` `c98a668`) | 14 newer commits on VA, synced on 2026-11-25: see `docs/SOURCE_SYNC.md` (commit ids are quoted in the `// Sources:` headers as `@ <commit>`) |
 | `MASTER` | `master` @ `37b7a16` (2026-11-22) | Merge of `feature/autonomos-beta`; Pedro autos checked in a simulator only |
 | `BETA` | `feature/autonomos-beta` @ `206fa84` | Pedro routes (Tick, Center Lane, Outer Lane, Park, Shoot Turn Collect) |
 | `NCAM` | `feature/mar/duopodriveNcam` @ `2d92fba` (2026-11-21) | Field map, saved pose, alternative tag spacing |
 | `ALP` | `feature/turrubiates/auto-leave-park` @ `e455142` | `LeaveParkAuto`, `GuardedStraightDrive` |
-| `FLOWER` | `feature/renata/flower-arm` @ `889102d` | `FlowerArm` (did not compile) |
+| `FLOWER` | `feature/renata/flower-arm` @ `889102d` | `FlowerArm` (did not compile; ported, then **removed** by the source sync: the robot has the VA+ FLOWER sweeper) |
 | `ALIGN` | `feature/renata/auto-align` @ `3e733d4` | Launcher idle pre-spin idea |
 | `TA` | `feature/theautonomous` @ `125df22` | `MatchClock`, `TimeModel`, `RouteRunner` (ideas) |
 | `LUISAUTO` | `feature/luis/autonomospaths` @ `9cf2c66` | `Pid` (ideas) |
@@ -39,23 +40,23 @@ Paths in the "From" column are under the old `TeamCode/src/main/java/org/firstin
 | New class | From (ref / file: what) |
 |---|---|
 | `RobotConstants` | VA `RobotHardware.java` (device + legacy names), `subsystems/BatteryMonitor.java` (battery limits), `subsystems/IndicatorLight.java` (light colors); MASTER `RobotHardware.java` (`pinpoint`, legacy `indexer`, green light) |
-| `DriveConstants` | VA `subsystems/MecanumDrive.java` (ramps, speeds), `opmodes/auto/PedroAutoBase.java` (odometry driver, pose guards), `opmodes/auto/SafeMoveAuto.java` (ticks/cm); MASTER `Constants.java` (motor ticks, wheel diameter) |
-| `IntakeConstants` | VA `subsystems/Intake.java` (power, ramp), `RobotHardware.java` (direction, commit 927e4df), `PedroAutoBase.java` (shake, commit 7004eba) |
+| `DriveConstants` | VA `subsystems/MecanumDrive.java` (ramps, speeds), `opmodes/auto/PedroAutoBase.java` (odometry driver, pose guards), `opmodes/auto/SafeMoveAuto.java` (ticks/cm); MASTER `Constants.java` (motor ticks, wheel diameter); VA+ 28ed859 (Pinpoint reboot recovery) |
+| `IntakeConstants` | VA `subsystems/Intake.java` (power, ramp), `RobotHardware.java` (direction, commit 927e4df), `PedroAutoBase.java` (shake, commit 7004eba); VA+ b6913d9 (jam protection) |
 | `IndexerConstants` | VA `subsystems/Indexer.java` (feed power, jam detection, commit 9c03b6c) |
-| `LauncherConstants` | VA `subsystems/Shooter.java` (RPM, PIDF, voltage compensation), `PreloadRouteAuto.java` (auto RPM, preload); MASTER `Constants.java` (spin-up timeout) |
-| `FlowerArmConstants` | FLOWER `subsystems/FlowerArm.java` (positions), `RobotHardware.java` (servo directions) |
+| `LauncherConstants` | VA `subsystems/Shooter.java` (RPM, PIDF, voltage compensation), `PreloadRouteAuto.java` (auto RPM, preload); MASTER `Constants.java` (spin-up timeout); VA+ 854de85 (`POLLEN_IDLE_RPM`), 19de992 (`READY_BELOW_RPM` / `READY_ABOVE_RPM`) |
+| `FlowerSweeperConstants` | VA+ 344254b `subsystems/FlowerSweeper.java` (UP/DOWN positions, move time), `RobotHardware.java` (500–2500 µs range). Replaces `FlowerArmConstants` (FLOWER, removed) |
 | `VisionConstants` | VA `subsystems/vision/HiveVision.java`, `HiveGeometry.java`, `HiveAlignController.java`, `BallVision.java` (HuskyLens IDs); NCAM (alternative tag spacing) |
 | `ControlConstants` | New (gamepad thresholds); VA `opmodes/teleop/MainTeleOp.java` (brake, jam, battery rumbles) |
-| `AutoConstants` | VA `PreloadRouteAuto.java` (leg distances, time limits), `PedroAutoBase.java` (path timeout); TA `TimeModel.java` (idea); ALP `LeaveParkAuto.java` (encoder LEAVE) |
+| `AutoConstants` | VA `PreloadRouteAuto.java` (leg distances, time limits), `PedroAutoBase.java` (path timeout); TA `TimeModel.java` (idea); ALP `LeaveParkAuto.java` (encoder LEAVE); VA+ 4fd2293 (collect line, other-cell spot, aim), 1e723f2 (park depth, fitted time model, park margin/power), f26f8d0 (wait-TIP values) |
 | `FieldConstants` | NCAM field map (HIVE box, tiles); VA `PreloadRouteAuto.java` (near start, TESTED); BETA `ParkAuto.java` (far start); `docs/AUDIT_PEDRO.md` §5.1 (zones, FLOWERS) |
 | `MatchConstants` | New (Competition Manual TU10, `docs/RULES_COMPLIANCE.md`) |
-| `TuningConstants` | VA `opmodes/teleop/DriveWheelTest.java` (test power), `opmodes/calibration/HiveStateProbe.java` (drive scale, no-tag interval) |
+| `TuningConstants` | VA `opmodes/teleop/DriveWheelTest.java` (test power), `opmodes/calibration/HiveStateProbe.java` (drive scale, no-tag interval); VA+ 344254b `SweeperServoCalibration` (sweeper steps) |
 
 ### hardware/, util/
 
 | New class | From |
 |---|---|
-| `hardware/RobotHardware` | VA `RobotHardware.java` (constructor, `getDevice` with legacy names, motor setup, optional cameras); MASTER `RobotHardware.java` (pinpoint lookup); FLOWER `RobotHardware.java` (flower arm servos). Changed: missing devices give warnings, MANUAL bulk caching. |
+| `hardware/RobotHardware` | VA `RobotHardware.java` (constructor, `getDevice` with legacy names, motor setup, optional cameras); MASTER `RobotHardware.java` (pinpoint lookup); VA+ 344254b (sweeper servos as `ServoImplEx`, 500–2500 µs; they replaced the FLOWER arm servos), 023ae35 (Pinpoint device kept for `PinpointDiagnostics`). Changed: missing devices give warnings, MANUAL bulk caching. |
 | `util/Alliance` | VA `subsystems/vision/Alliance.java` (enum), `subsystems/pathing/AlliancePoses.java` (pose idea). Changed: 180° rotation, not a mirror (D13). |
 | `util/MatchTimer` | VA `PedroAutoBase.autoSeconds()`; TA `MatchClock.java` (idea) |
 | `util/GamepadEx` | VA `Shooter.handleRpmTuning` (edge detection), `MainTeleOp.shapeStickInput` (deadzone + cubic) |
@@ -70,15 +71,16 @@ Paths in the "From" column are under the old `TeamCode/src/main/java/org/firstin
 |---|---|
 | `Subsystem` | New (common shape of the VA subsystems) |
 | `Drivetrain` | VA `subsystems/MecanumDrive.java` (`drive`, `driveRamped`, `computeTargets`, `applyRamp`, `setPowerLimit`, `setBrake`, slow/fast, `getWheelPositions`, `resetEncoders`); MASTER `MecanumDrive.java` (`stop`, `getAverageForwardCm`). New: field-centric. |
-| `Intake` | VA `subsystems/Intake.java` (states, ramp, `stop`, `getState`, `getPower`); VA `PedroAutoBase.java` (intake shake). New: G407 gate, G408 stop. |
+| `Intake` | VA `subsystems/Intake.java` (states, ramp, `stop`, `getState`, `getPower`); VA `PedroAutoBase.java` (intake shake); VA+ b6913d9 (jam protection `checkJam`, `UNJAMMING`). New: G407 gate, G408 stop (also wins over an unjam). |
 | `Indexer` | VA `subsystems/Indexer.java` (states, pause, `checkForJam`, ramp, counters) |
-| `Launcher` | VA `subsystems/Shooter.java` (fire/reverse/stop, `updateReady`, `compensateForVoltage`, `applyPidf`, RPM conversion, `clampRpm`, `setTargetRpmP`); MASTER `Shooter.java` (`setTargetRpm(p, n)`, `atTargetRPM`); ALIGN `Shooter.java` (idle pre-spin idea, off) |
+| `Launcher` | VA `subsystems/Shooter.java` (fire/reverse/stop, `updateReady`, `compensateForVoltage`, `applyPidf`, RPM conversion, `clampRpm`, `setTargetRpmP`); MASTER `Shooter.java` (`setTargetRpm(p, n)`, `atTargetRPM`); ALIGN `Shooter.java` (idle pre-spin idea, off); VA+ 854de85 (POLLEN idle spin `setPollenIdle`), 19de992 (asymmetric feed window) |
 | `ShotDetector` | VA `subsystems/ShooterLogger.java` inner class `ShotTracker` |
 | `ColorSensing` | VA `subsystems/vision/BallVision.java` (HuskyLens read, `Ball`, `getClosestBall`, `getAssistTurn`, `colorOf`), `BallIntakeCounter.java`, `subsystems/NectarAlertLight.java` (closest NECTAR check) |
 | `BallCounter` | VA `subsystems/vision/BallIntakeCounter.java` (counting logic) |
 | `BallColor` | VA `BallVision.BallColor` enum |
 | `ElementCounter` | New (G407) |
-| `FlowerArm` | FLOWER `subsystems/FlowerArm.java` (`deploy`, `retract`, `toggle`, `isDeployed`). Fixed: the constructor was named `DualServo`. New: optional servos, G410 gate. |
+| `FlowerSweeper` | VA+ 344254b `subsystems/FlowerSweeper.java` (`down`, `up`, `toggle`, `update` → `periodic`, `getState`). New: `Subsystem`, injectable clock, optional lowering gate (G410 unlock). |
+| ~~`FlowerArm`~~ | FLOWER `subsystems/FlowerArm.java`. **Removed in the source sync (2026-11-25):** the robot has the sweeper instead; the arm never ran on the robot (D14) and both used gamepad1 B. Its G410 gate lives on as the sweeper's lowering gate; `FlowerArmTest` → `FlowerSweeperTest`. |
 | `Vision` | VA `subsystems/vision/HiveVision.java` (queries); VA `PedroAutoBase.java` (TIP check `sinceScoringCellSeen` / `hasSeenScoringCell` → `isCellDown`) |
 | `Lights` | VA `subsystems/IndicatorLight.java` (colors, blink); MASTER `IndicatorLight.java` (`setGreen`); VA `subsystems/NectarAlertLight.java` |
 | `BatteryMonitor` | VA `subsystems/BatteryMonitor.java` (whole class) |
@@ -101,11 +103,13 @@ Paths in the "From" column are under the old `TeamCode/src/main/java/org/firstin
 | New class | From |
 |---|---|
 | `PedroConstants` | VA `subsystems/pathing/PedroFollowerFactory.java` (`DRIVETRAIN_CONFIG`, `LOCALIZER_CONFIG`, `FOLLOWER_CONFIG`, `create`) |
-| `OdometryDriver` | VA `PedroAutoBase.java` (`driveTo`, `driveThrough`, `driveLeg`, `turnTo`, `settle`, `holdTarget`, `holdStep`, `checkOdometry`, `startPoseErrorIn`, `startHeadingErrorDeg`, `driveRobotCentric`) |
-| `AutoPlanner` | VA `PreloadRouteAuto.runCollectRoutine` time guards, `shootTimeLeft`; TA `MatchClock`, `TimeModel` (idea); FTC 22526 (idea only) |
+| `OdometryDriver` | VA `PedroAutoBase.java` (`driveTo`, `driveThrough`, `driveLeg`, `turnTo`, `settle`, `holdTarget`, `holdStep`, `checkOdometry`, `startPoseErrorIn`, `startHeadingErrorDeg`, `driveRobotCentric`); VA+ 28ed859 (Pinpoint reboot recovery) |
+| `PinpointDiagnostics` | VA+ 023ae35 `subsystems/pathing/PinpointDiagnostics.java` (status counters, `summary`, `csvFields`); device from `RobotHardware` |
+| `AutoPlanner` | VA `PreloadRouteAuto.runCollectRoutine` time guards, `shootTimeLeft`; TA `MatchClock`, `TimeModel` (idea); FTC 22526 (idea only); VA+ 1e723f2 (fitted time model, `parkPower`, `volleyTimeLeft`, `hasTimeForOtherCell`) |
 | `FieldDrawing` | VA `subsystems/pathing/FieldDrawing.java` (+ `drawPath`) |
-| `PoseLogger` | VA `subsystems/pathing/PoseLogger.java` (pose columns only) |
-| `paths/NearRoutePoses` | VA `PreloadRouteAuto.buildPoses`, `relative` |
+| `PoseLogger` | VA `subsystems/pathing/PoseLogger.java` (pose columns only); VA+ 023ae35 (`pinpoint_*` columns) |
+| `paths/NearRoutePoses` | VA `PreloadRouteAuto.buildPoses`, `relative`; VA+ 4fd2293 (collect line, angled other-cell spot), 1e723f2 (park depth) |
+| `paths/WaitTipPaths` | VA+ f26f8d0 `FarSideWaitTipAuto.buildPoses` (start, LEAVE, upper-zone PARK) |
 | `paths/PreloadParkPaths` | VA `PreloadRouteAuto.runRoutine` park legs |
 | `paths/PreloadCollectPaths` | VA `PreloadRouteAuto.runCollectRoutine`, `returnAndCheckTip`, `parkFromShootSide`; `PreloadCollectAuto.isCollecting` |
 | `paths/OtherCellPaths` | VA `PreloadRouteAuto` TIP branches, `shootAtOtherCellAndPark` |
@@ -120,7 +124,7 @@ Paths in the "From" column are under the old `TeamCode/src/main/java/org/firstin
 | `paths/PathCatalog` | New (`docs/AUDIT_PEDRO.md` §7, `BEST_OF_MATRIX` §4) |
 | `tuning/Tuning` | VA `subsystems/pathing/tuning/Tuning.java` |
 | `tuning/MecanumTuner`, `PinpointTuner`, `ForesightTuner`, `Tests` | VA copies of the Pedro Pathing Quickstart (whole files, only the package changed) |
-| `tuning/TestPedroPose` | VA `opmodes/calibration/PedroPoseCheck.java` |
+| `tuning/TestPedroPose` | VA `opmodes/calibration/PedroPoseCheck.java`; VA+ 023ae35 (Pinpoint health line) |
 | `tuning/TestOdometrySquare` | VA `OdometrySquareTestAuto.java` |
 | `tuning/TestOdometryDriver` | VA `PreloadRouteAuto.runRoutine` park legs (no shooting) |
 
@@ -131,6 +135,7 @@ Paths in the "From" column are under the old `TeamCode/src/main/java/org/firstin
 | `auto/AutoBase` | VA `PedroAutoBase.java` (INIT alliance, A = re-zero, start-pose check, logs, `stopAll`, helpers, `applyMechanisms`); ALP `LeaveParkAuto` (start delay) |
 | `auto/ScoringAuto` | VA `PreloadRouteAuto` (`runRoutine`, `runCollectRoutine`, `returnAndCheckTip`, `parkFromShootSide`, `shootAtOtherCellAndPark`, `relativeOther`, `shootTimeLeft`); `BEST_OF_MATRIX` §5 |
 | `auto/AutoRedNear`, `AutoBlueNear`, `AutoRedFar`, `AutoBlueFar` | VA `PreloadRouteAuto` (`@Autonomous "Preload + Park (Odometry)"`) |
+| `auto/WaitTipAuto`, `AutoRedWaitTip`, `AutoBlueWaitTip` | VA+ f26f8d0 `FarSideWaitTipAuto` (LEAVE, pre-spin, wait for a stable cell, aim, shoot, park in the upper zone) |
 | `auto/AutoSafePark` | VA `PreloadRouteAuto` (LEAVE + park legs); BETA `ParkAuto`; ALP `LeaveParkAuto` |
 | `auto/AutoSafeParkEncoders` | ALP `LeaveParkAuto` (start moved out of the zone for G304.E) |
 | `auto/AutoSelector` | VA `PedroAutoBase` INIT buttons (B red, X blue); ALP D-pad start delay |
@@ -149,6 +154,7 @@ Paths in the "From" column are under the old `TeamCode/src/main/java/org/firstin
 | `tuning/TuneColorSensor` | VA `MainTeleOp.addBallTelemetry` |
 | `tuning/TuneHiveVision` | VA `opmodes/calibration/HiveStateProbe.java` |
 | `tuning/TuneLauncherPidf` | VA `MainTeleOp` (`Graph/*` telemetry), `ShooterLogger` (CSV columns) |
+| `tuning/TuneFlowerSweeper` | VA+ 344254b `opmodes/calibration/SweeperServoCalibration.java` |
 
 ### Tests
 
@@ -220,6 +226,15 @@ Ported from VA `src/test` @ `a7b8f4c`: `HiveGeometryTest`, `HiveOrientationTest`
 | `IntakeConstants.REJECT_OPPONENT_NECTAR`, `REJECT_EJECT_SECONDS` | `STOP_FOR_OPPONENT_NECTAR`, `OPPONENT_NECTAR_HOLD_SECONDS` (eject removed) | G408 decision |
 | Intake state `REJECTING` | `OPPONENT_NECTAR` | G408 decision |
 | `PATH_TIMEOUT_SEC` (VA) | `AutoConstants.PATH_TIMEOUT_SECONDS` | Units spelled out |
+| `Shooter.READY_TOLERANCE_RPM` (VA) / `LauncherConstants.READY_TOLERANCE_RPM` | `READY_BELOW_RPM` (50), `READY_ABOVE_RPM` (80) | VA+ 19de992 asymmetric feed window |
+| `Shooter.POLLEN_IDLE_RPM`, `POLLEN_IDLE_AT_START` (VA+) | `LauncherConstants.POLLEN_IDLE_RPM`, `POLLEN_IDLE_AT_START` | Same values |
+| `Intake.JAM_TIME_SEC`, `UNJAM_TIME_SEC` (VA+) | `IntakeConstants.JAM_SECONDS`, `JAM_REVERSE_SECONDS` | Units spelled out |
+| `PedroAutoBase.PINPOINT_RESET_MAX_RECOVERIES` (VA+) | `DriveConstants.PINPOINT_RESET_MAX_RECOVERIES` | Same value |
+| `PedroAutoBase.PARK_MARGIN_SEC`, `PARK_MAX_POWER`, `ESTIMATE_IN_PER_SEC_PER_POWER`, `ESTIMATE_FIXED_SEC`, `ESTIMATE_PER_LEG_SEC` (VA+) | `AutoConstants.PARK_MARGIN_SECONDS`, `PARK_MAX_POWER`, `ESTIMATE_INCHES_PER_SECOND_PER_POWER`, `ESTIMATE_ROUTE_FIXED_SECONDS`, `ESTIMATE_PER_LEG_SECONDS` | Replace `CRUISE_INCHES_PER_SECOND` / `LEG_OVERHEAD_SECONDS` |
+| `PreloadRouteAuto.OTHER_CELL_LATEST_START_SEC`, `OTHER_CELL_SHOOT_END_SEC` (VA), `AutoConstants.OTHER_CELL_LATEST_START_SECONDS`, `OTHER_CELL_SHOOT_END_SECONDS` | removed: `AutoPlanner.hasTimeForOtherCell`, `getVolleyTimeLeft` | VA+ 1e723f2 time model |
+| `VISION_APPROACH_MAX_CM`, `VISION_APPROACH_MIN_CM`, `OTHER_SPOT_SHORTEN_CM`, `START_WALL_DISTANCE_CM`, `FIELD_LENGTH_CM` (`AutoConstants`) | `AIM_*` constants, `OTHER_SPOT_BACK_CM` / `RIGHT_CM` / `TURN_DEGREES` | VA+ 4fd2293 Limelight aim and angled spot |
+| `FlowerSweeper.LEFT_UP` etc. (VA+) | `FlowerSweeperConstants.LEFT_UP_POSITION` etc. | Units/kind spelled out |
+| `RobotConstants.FLOWER_ARM_LEFT_SERVO` / `RIGHT` | `SWEEPER_LEFT_SERVO` / `SWEEPER_RIGHT_SERVO` (old names in `*_LEGACY`) | Sweeper replaces the arm |
 
 ### 3.4 OpModes (Driver Station list)
 
@@ -235,6 +250,8 @@ Ported from VA `src/test` @ `a7b8f4c`: `HiveGeometryTest`, `HiveOrientationTest`
 | `Pedro Pose Check` (VA) | `Test Pedro Pose` | Tuning |
 | `Odometry Square Test` (VA) | `Test Odometry Square` | Tuning |
 | — | `Test Odometry Driver`, `Test Indexer Intake`, `Tune Color Sensor`, `Tune Launcher PIDF` | Tuning (new) |
+| `Far Side: Wait TIP + Park (Odometry)` (VA+ f26f8d0) | `Auto Red Wait Tip`, `Auto Blue Wait Tip` (back-wall start; not the team's FAR, D21) | Competition (untested) |
+| `Sweeper Servo Calibration` (VA+ 344254b, group "Calibration") | `Tune Flower Sweeper` | Tuning |
 | `Tick`, `Center Lane`, `Outer Lane`, `Shoot Turn Collect` (BETA) | not OpModes any more (path classes kept as data) | — |
 
 ### 3.5 Driver Station hardware names
@@ -251,7 +268,8 @@ legacy names as a fallback (Pedro Pathing does not). See also `README.md` → Ha
 | `N`, `shooterN`, `shooterNectar` | `nectarShooterMotor` (DS name kept, D15) | `nectarLauncherMotor` |
 | `indicator` | `indicatorLight` | `indicatorLight` |
 | — | `nectarAlertLight` (optional) | `nectarAlertLight` |
-| `servoLeft`, `servoRight` | `flowerArmLeftServo`, `flowerArmRightServo` (optional) | `flowerArmLeftServo`, `flowerArmRightServo` |
+| `sweeperLeftServo`, `sweeperRightServo` (VA+) | `sweeperLeftServo`, `sweeperRightServo` (optional) | `sweeperLeftServo`, `sweeperRightServo` |
+| `servoLeft`, `servoRight` (FLOWER), `flowerArmLeftServo`, `flowerArmRightServo` (HiveMind before the sync) | accepted as legacy names of the sweeper servos | `sweeperLeftServo`, `sweeperRightServo` |
 | `limelight`, `huskyLens`, `pinpoint` | unchanged | `limelight`, `huskyLens` (pinpoint is owned by Pedro) |
 | `pera`, `stopServo`, `shooterGateServo` | removed (gate removed from the robot 2026-11-20) | — |
 | `imu 1` | not used by the code | — |
@@ -267,7 +285,10 @@ legacy names as a fallback (Pedro Pathing does not). See also `README.md` → Ha
 | Bulk caching MANUAL (VA used AUTO) | One sensor read per loop; every OpMode calls `clearBulkCache()` |
 | Intake stops for opponent NECTAR instead of ejecting it | G408 (team decision): pushing it away is CONTROL too |
 | G407 element counter gates the intake; count handed from AUTO to TeleOp | Never control more than 4 elements |
-| Flower arm locked until the last 60 s (1 s margin) | G410 |
+| FLOWER sweeper lowering locked until the last 60 s (1 s margin) while `LOCK_DOWN_UNTIL_NECTAR_UNLOCK` | Conservative policy (G410 unlock, §10.5.2); VA+ let the operator use it any time |
+| Flower arm removed, FLOWER sweeper added (gamepad1 B; VA+ used gamepad2 A, which is auto-shoot here) | The robot has the sweeper (VA+ 344254b); the arm never ran on the robot (D14) |
+| POLLEN idle spin on gamepad2 right stick button (VA+ used gamepad2 BACK, which is the telemetry toggle here) | VA+ 854de85 |
+| Park at the LOADING ZONE's low edge (y 95.4), still 2.1 in off the wall; other-cell park square to the wall | VA+ 1e723f2 (room for the partner) + team decision (LEAVE) |
 | Every park ends 2 in off the wall (`RIGHT_2_CM` 60 → 56.5) | LEAVE must still count (team decision). **Needs a robot re-test.** |
 | Safe Park "loading zone" start moved behind the zone tape | G304.E forbids starting inside the LOADING ZONE |
 | Time-aware AUTO (`AutoPlanner`) + `EmergencyPark` | Always park before 30 s |

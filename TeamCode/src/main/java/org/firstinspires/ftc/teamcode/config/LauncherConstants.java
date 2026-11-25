@@ -1,4 +1,4 @@
-// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/Shooter.java @ a7b8f4c (RPM targets, PIDF, voltage compensation)
+// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/Shooter.java @ a7b8f4c (RPM targets, PIDF, voltage compensation) @ 854de85 (POLLEN_IDLE_RPM, POLLEN_IDLE_AT_START) @ 19de992 (READY_BELOW_RPM / READY_ABOVE_RPM feed window)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PreloadRouteAuto.java @ a7b8f4c (auto RPM, preload)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch master / TeamCode/.../Constants.java @ 37b7a16 (spin-up timeout)
 //          — adapted for BIOBUZZ ("Shooter" renamed to "Launcher")
@@ -37,8 +37,21 @@ public final class LauncherConstants {
     public static double POLLEN_OTHER_CELL_RPM = 2950.0;
     /** TESTED: 4500 was unreachable. NECTAR is not scored at the first event. */
     public static double NECTAR_RPM = 3600.0;
-    /** Flywheel speed between shots. 0 = off (saves battery). Alternative 1800. TODO: TUNE */
+    /**
+     * Speed of a flywheel that is not firing, when no idle spin is on. 0 = off (saves battery).
+     * In TeleOp the POLLEN idle spin below replaces it for the POLLEN flywheel.
+     */
     public static double IDLE_RPM = 0.0;
+    /**
+     * POLLEN idle spin between volleys in TeleOp (vision-align 854de85). FITTED from the
+     * 2026-11-24 TeleOp logs: the POLLEN flywheel was ready 0.7 s after a fire command from
+     * ~2000 RPM, versus 1.4-3.0 s from a stop. Steady spinning only costs friction and air
+     * (~1-1.5 A). Idle keeps the IDLE state: never "ready", no shots counted. TODO: TUNE
+     * (not yet run in a match; measure the idle current).
+     */
+    public static double POLLEN_IDLE_RPM = 2000.0;
+    /** Whether TeleOp starts with the POLLEN idle spin on (gamepad2 right stick button toggles it). */
+    public static boolean POLLEN_IDLE_AT_START = true;
 
     // ---------------- Velocity PIDF (TESTED from logs) ----------------
     public static double KP = 30.0;
@@ -52,10 +65,25 @@ public final class LauncherConstants {
     /** Below this voltage the reading is treated as noise and ignored. */
     public static double KF_MIN_VALID_VOLTS = 7.0;
 
-    // ---------------- Ready check (TESTED) ----------------
-    /** The launcher becomes "ready" within this many RPM of the target... */
-    public static double READY_TOLERANCE_RPM = 100.0;
-    /** ...and only stops being ready if it falls further than this (hysteresis). */
+    // ---------------- Ready check (feed window) ----------------
+    /**
+     * A firing flywheel becomes "ready" (the indexer may feed the next ball) only once it is at
+     * most this many RPM BELOW its target... FITTED (vision-align 19de992): with a symmetric
+     * 100 RPM window, 6 of 72 logged shots left 57-79 RPM low (two short shots at the other
+     * cell). Costs ~0.1 s per shot (median, 0.3 s at p90). Readings come in ~43 RPM steps (28
+     * ticks per revolution), so do not go below ~45. TODO: TUNE (not yet run on the robot)
+     */
+    public static double READY_BELOW_RPM = 50.0;
+    /**
+     * ...and at most this many RPM ABOVE it: an overshoot after the recovery also throws long
+     * (one logged shot left +71 RPM high). FITTED (vision-align 19de992). TODO: TUNE
+     */
+    public static double READY_ABOVE_RPM = 80.0;
+    /**
+     * A ready flywheel stops being ready only when it is more than this many RPM off its target
+     * (a shot dip). Wider than the feed window, so readiness does not flicker at its edge.
+     * TESTED (vision-align a7b8f4c).
+     */
     public static double NOT_READY_TOLERANCE_RPM = 200.0;
     public static double SPIN_UP_TIMEOUT_SECONDS = 3.0; // TODO: TUNE
 

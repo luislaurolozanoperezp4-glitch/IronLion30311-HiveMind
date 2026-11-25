@@ -1,5 +1,6 @@
 // Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/teleop/DriveWheelTest.java @ a7b8f4c (TEST_POWER 0.3)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/calibration/HiveStateProbe.java @ a7b8f4c (DRIVE_SCALE 0.3, NO_TAG_INTERVAL_SEC 0.1)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/calibration/SweeperServoCalibration.java @ 344254b (COARSE_STEP 0.02, FINE_STEP 0.005)
 //          — adapted for BIOBUZZ
 package org.firstinspires.ftc.teamcode.config;
 
@@ -42,4 +43,11 @@ public final class TuningConstants {
 
     /** Time between two current CSV rows in Test Indexer Intake, in seconds. TODO: TUNE */
     public static double CURRENT_LOG_INTERVAL_SECONDS = 0.05;
+
+    // ---------------- Tune Flower Sweeper (vision-align SweeperServoCalibration @ 344254b) ----------------
+
+    /** Servo position change per D-pad up/down tap (~6 degrees on a 300-degree servo). */
+    public static double SWEEPER_COARSE_STEP = 0.02;
+    /** Servo position change per D-pad right/left tap (~1.5 degrees). */
+    public static double SWEEPER_FINE_STEP = 0.005;
 }

@@ -1,17 +1,20 @@
 // Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/Intake.java @ a7b8f4c (states, ramp, stop, getState, getPower)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PedroAutoBase.java @ a7b8f4c (intake shake: short reverse to free a stuck ball)
-//          — adapted for BIOBUZZ (update(collect, eject) -> collect()/eject()/idle() + periodic(); G407 collect gate; G408 stop for opponent NECTAR)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/Intake.java @ b6913d9 (jam protection: checkJam, UNJAMMING, getTotalUnjams)
+//          — adapted for BIOBUZZ (update(collect, eject) -> collect()/eject()/idle() + periodic(); G407 collect gate; G408 stop for opponent NECTAR, also during an unjam)
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.teamcode.config.IntakeConstants;
 import org.firstinspires.ftc.teamcode.hardware.RobotHardware;
 import org.firstinspires.ftc.teamcode.util.MatchTimer;
 import org.firstinspires.ftc.teamcode.util.SlewRateLimiter;
 
 import java.util.function.BooleanSupplier;
+import java.util.function.DoubleSupplier;
 
 /**
  * The intake at the front of the robot: one motor that pulls balls in or pushes them out.
@@ -32,6 +35,12 @@ import java.util.function.BooleanSupplier;
  *   decision: pushing it away is not allowed either (G408 control, G405 if it leaves the FIELD,
  *   G402 in AUTO).</li>
  * </ul>
+ * <p>
+ * <b>Jam protection</b> (vision-align b6913d9): while collecting at speed, a motor current above
+ * {@link IntakeConstants#JAM_CURRENT_AMPS} for {@link IntakeConstants#JAM_SECONDS} means a ball
+ * is stuck. The intake reverses for {@link IntakeConstants#JAM_REVERSE_SECONDS}
+ * ({@link State#UNJAMMING}) and then collects again if collect is still requested. The G408
+ * stop wins over an unjam: an opponent NECTAR at the intake is never pushed out.
  */
 public class Intake implements Subsystem {
 
@@ -47,6 +56,8 @@ public class Intake implements Subsystem {
         EJECTING,
         /** Short reverse to free a stuck ball. */
         SHAKING,
+        /** Short reverse after the motor current showed a jam while collecting. */
+        UNJAMMING,
         /** Stopped because the opponent's NECTAR is at the intake (G408). Never pushes it. */
         OPPONENT_NECTAR,
         /** Collect refused: the robot already controls the maximum number of elements (G407). */
@@ -55,6 +66,7 @@ public class Intake implements Subsystem {
 
     private final DcMotorEx motor;
     private final MatchTimer.Clock clock;
+    private final DoubleSupplier currentAmps;
     private final SlewRateLimiter ramp = new SlewRateLimiter(IntakeConstants.RAMP_SECONDS);
 
     private BooleanSupplier collectGate;
@@ -67,6 +79,9 @@ public class Intake implements Subsystem {
     private double lastTimeSec = Double.NaN;
     private double lastWrittenPower = 0.0;
     private int opponentNectarStopCount = 0;
+    private double unjamEndSec = Double.NaN;
+    private double highCurrentSec = 0.0;
+    private int unjamCount = 0;
 
     /** @param hardware robot hardware; the intake motor may be missing */
     public Intake(RobotHardware hardware) {
@@ -74,14 +89,31 @@ public class Intake implements Subsystem {
     }
 
     /**
-     * For tests.
+     * For tests. Reads the motor current from the motor (none without a motor).
      *
      * @param motor intake motor, or null
      * @param clock time source
      */
-    public Intake(DcMotorEx motor, MatchTimer.Clock clock) {
+    public Intake(final DcMotorEx motor, MatchTimer.Clock clock) {
+        this(motor, clock, motor == null ? null : new DoubleSupplier() {
+            @Override
+            public double getAsDouble() {
+                return motor.getCurrent(CurrentUnit.AMPS);
+            }
+        });
+    }
+
+    /**
+     * For tests of the jam protection.
+     *
+     * @param motor       intake motor, or null
+     * @param clock       time source
+     * @param currentAmps motor current in amps, or null to turn the jam protection off
+     */
+    public Intake(DcMotorEx motor, MatchTimer.Clock clock, DoubleSupplier currentAmps) {
         this.motor = motor;
         this.clock = clock;
+        this.currentAmps = currentAmps;
     }
 
     /** @param gate returns false when the robot may not take another element (G407), or null */
@@ -128,11 +160,49 @@ public class Intake implements Subsystem {
         lastTimeSec = nowSec;
 
         state = decideState(nowSec);
+        checkJam(nowSec, dtSec);
         ramp.setRampSeconds(IntakeConstants.RAMP_SECONDS, IntakeConstants.RAMP_SECONDS);
         writePower(ramp.calculate(targetPowerFor(state), dtSec));
     }
 
+    /**
+     * Starts an unjam once the current stayed above {@link IntakeConstants#JAM_CURRENT_AMPS} for
+     * {@link IntakeConstants#JAM_SECONDS} while collecting at speed. The current is read only
+     * then (each read is an extra hub transaction).
+     */
+    private void checkJam(double nowSec, double dtSec) {
+        boolean isAtSpeed = lastWrittenPower
+                >= IntakeConstants.COLLECT_POWER * IntakeConstants.JAM_MIN_POWER_FRACTION;
+        if (!IntakeConstants.JAM_PROTECTION_ENABLED || currentAmps == null
+                || state != State.COLLECTING || !isAtSpeed
+                || currentAmps.getAsDouble() < IntakeConstants.JAM_CURRENT_AMPS) {
+            highCurrentSec = 0.0;
+            return;
+        }
+        highCurrentSec += dtSec;
+        if (highCurrentSec >= IntakeConstants.JAM_SECONDS) {
+            highCurrentSec = 0.0;
+            unjamCount++;
+            unjamEndSec = nowSec + IntakeConstants.JAM_REVERSE_SECONDS;
+            state = State.UNJAMMING;
+        }
+    }
+
     private State decideState(double nowSec) {
+        if (!Double.isNaN(unjamEndSec)) {
+            if (nowSec < unjamEndSec) {
+                // G408 wins: never push an opponent NECTAR out, even to clear a jam
+                boolean isOpponentNectar = IntakeConstants.STOP_FOR_OPPONENT_NECTAR
+                        && opponentNectarDetector != null && opponentNectarDetector.getAsBoolean();
+                if (isOpponentNectar) {
+                    unjamEndSec = Double.NaN;
+                } else {
+                    return State.UNJAMMING;
+                }
+            } else {
+                unjamEndSec = Double.NaN;
+            }
+        }
         if (!Double.isNaN(shakeEndSec)) {
             if (nowSec < shakeEndSec) {
                 return State.SHAKING;
@@ -169,6 +239,8 @@ public class Intake implements Subsystem {
         requested = State.IDLE;
         state = State.IDLE;
         shakeEndSec = Double.NaN;
+        unjamEndSec = Double.NaN;
+        highCurrentSec = 0.0;
         opponentNectarLastSeenSec = Double.NaN;
         ramp.reset(0.0);
         writePower(0.0);
@@ -199,6 +271,16 @@ public class Intake implements Subsystem {
         return state == State.OPPONENT_NECTAR;
     }
 
+    /** @return true during a jam reverse */
+    public boolean isUnjamming() {
+        return state == State.UNJAMMING;
+    }
+
+    /** @return how many jams the current check found since the OpMode started */
+    public int getUnjamCount() {
+        return unjamCount;
+    }
+
     /** @return how many times the intake stopped for an opponent NECTAR */
     public int getOpponentNectarStopCount() {
         return opponentNectarStopCount;
@@ -216,7 +298,7 @@ public class Intake implements Subsystem {
 
     @Override
     public void addTelemetry(Telemetry t) {
-        t.addData("Intake", "%s (%.2f)%s", state, lastWrittenPower,
+        t.addData("Intake", "%s (%.2f), unjams %d%s", state, lastWrittenPower, unjamCount,
                 isConnected() ? "" : " - motor missing");
     }
 
@@ -227,6 +309,7 @@ public class Intake implements Subsystem {
                 return IntakeConstants.COLLECT_POWER;
             case EJECTING:
             case SHAKING:
+            case UNJAMMING:
                 return -IntakeConstants.EJECT_POWER;
             default:
                 return 0.0;

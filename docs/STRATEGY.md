@@ -17,7 +17,7 @@ optional and not confirmed on the robot).
 | PARK (partly in our LOADING ZONE) | 5 | 5 | Every AUTO, and at the end of every match |
 | HIVE TIP | 20 | 20 | Our main scoring: launch POLLEN into the up cell |
 | Element left in an up-facing CELL at match end | – | 2 each | Side effect of launching |
-| Element in an owned FLOWER | – | 2 each | Only with the flower arm, last 60 s (G410) |
+| Element in an owned FLOWER | – | 2 each | No placing mechanism yet; the FLOWER sweeper only removes POLLEN (G418) |
 | Bottom NECTAR Bonus | – | 5 | Not planned |
 | Element in GARDEN | – | 1 each | Not planned |
 
@@ -109,7 +109,7 @@ intake resumes 0.3 s after the ball leaves the camera's view.
 | Time left | What happens | What the drivers do |
 |---|---|---|
 | 1:05 | Both gamepads: 3 short blips | Plan the last cycle so the robot can still reach the LOADING ZONE |
-| 1:00 | Long rumble, `*** ENDGAME ***` banner, speed-mode light blinks; the flower arm unlocks (G410) | If the flower arm is on the robot and holds NECTAR, it may now go into a FLOWER (gamepad1 B) |
+| 1:00 | Long rumble, `*** ENDGAME ***` banner, speed-mode light blinks; the FLOWER sweeper unlocks | Sweep POLLEN off a FLOWER if the plan needs it (gamepad1 B) |
 | ~0:10 (team call) | — | Drive to PARK: at least part of the robot in our LOADING ZONE |
 | 0:00 | — | **Press STOP** (G404: no powered movement after the match). The robot cannot see the field timer. |
 
@@ -126,7 +126,7 @@ open question for the Q&A (`RULES_COMPLIANCE.md` §5).
 | G402 | Disrupting the opponent's AUTO | Routes stay on our half; `TerritoryGuard` stops the drive |
 | G407 | Controlling more than 4 elements | `ElementCounter` blocks the intake; gamepad1 X resets a wrong count |
 | G408 | Controlling opponent NECTAR | Intake stops; the driver drives away |
-| G410 | NECTAR into a FLOWER before 1:00 | Flower arm locked by the code; launched NECTAR is the drivers' job |
+| G410 | NECTAR into a FLOWER before 1:00 | FLOWER sweeper locked by the code (conservative); launched NECTAR is the drivers' job |
 | G417 | Changing the HIVE's motion except by launching into an up cell | AUTO keeps clear of the HIVE; in TELEOP do not ram the HIVE |
 | G403 / G404 | Moving during the transition or after the match | Do not press INIT/START early; press STOP at 0:00 |
 | G304 | Illegal start | Start poses are checked by tests; the drive coach checks the robot is touching the wall, not in the LOADING ZONE, 4 POLLEN touching |
@@ -137,4 +137,5 @@ open question for the Q&A (`RULES_COMPLIANCE.md` §5).
 - Tune the planner estimates from the AUTO pose logs, then raise `MAX_CYCLES` if a second cycle
   fits.
 - Calibrate HIVE auto-align (currently off) to make TELEOP launching faster.
-- Decide on NECTAR scoring (flower arm, second flywheel) for the ENDGAME.
+- Decide on NECTAR scoring (second flywheel) for the ENDGAME, and how to use the FLOWER sweeper.
+- Decide which robot starts where: with **Auto Wait Tip** (back wall) our partner TIPs first and parks at the LOADING ZONE's low edge, we park at its top.

@@ -34,9 +34,9 @@ Base source: `VA` = `feature/turrubiates/vision-align` @ a7b8f4c (`MainTeleOp`, 
 | Right stick X | Turn | same |
 | LT (hold) | Brake (rumbles if the sticks move) | same |
 | A / Y | Slow / fast mode | same |
-| LB (hold) | Intake collect + ball assist turn (when not turning) | assist now ignores the opponent's NECTAR |
+| LB (hold) | Intake collect + ball assist turn (only while driving forward, not turning, no launcher in use) | assist ignores the opponent's NECTAR; forward-only since the source sync (VA+ 023ae35) |
 | RB (hold) | Intake eject | same |
-| B (tap) | Flower arm deploy / retract. Deploy is refused (short rumble) before ENDGAME (G410) | **new** (B was "RED" in INIT) |
+| B (tap) | FLOWER sweeper down / up (slowed). Lowering is refused (short rumble) before ENDGAME while `LOCK_DOWN_UNTIL_NECTAR_UNLOCK` | **new** (B was "RED" in INIT); was the flower arm until the source sync; VA+ uses gamepad2 A |
 | X (tap) | Reset the element count to 0 (G407 counter override) | **new** (X was "BLUE" in INIT) |
 | BACK (tap) | Field-centric on/off. Turning it on makes the current robot heading "away from the driver". Needs the Pinpoint | **new** |
 
@@ -44,13 +44,14 @@ Base source: `VA` = `feature/turrubiates/vision-align` @ a7b8f4c (`MainTeleOp`, 
 
 | Input | Action | vs `MainTeleOp` |
 |---|---|---|
-| RT (hold) | Fire POLLEN (indexer feeds only when ready and aimed) | same |
+| RT (hold) | Fire POLLEN (indexer feeds only when ready and aimed; ready = inside −50 / +80 RPM of the target) | feed window from VA+ 19de992 (was ±100) |
 | LT (hold) | Fire NECTAR | same |
 | RB / LB (hold) | Reverse POLLEN / NECTAR | same |
 | D-pad up / down | POLLEN target ±50 RPM | same |
 | D-pad right / left | NECTAR target ±50 RPM | same |
 | X / Y / B (tap) | Mark the last shot SHORT / LONG / WIDE (match log + short rumble) | same idea; marks go to the match CSV (the VA `ShooterLogger` is not ported) |
 | A (tap) | Auto-shoot volley (`ShootingSequence`: spin up, feed one ball per ready window, shake a stuck ball, stop by itself). Tap again, or touch any intake/launcher input, to cancel | **new** |
+| Right stick button (tap) | POLLEN idle spin off / on (2000 RPM between volleys; on at START, never in INIT; off while the battery is low) | **source sync** (VA+ 854de85 uses gamepad2 BACK, taken here by the telemetry toggle) |
 | BACK (tap) | COMPETITION / DEBUG telemetry | **new** |
 
 **Automatic**
@@ -59,7 +60,7 @@ Base source: `VA` = `feature/turrubiates/vision-align` @ a7b8f4c (`MainTeleOp`, 
 |---|---|
 | INIT | Light shows the alliance (red/blue); missing devices, cameras, odometry, AUTO pose handoff listed |
 | 65 s left | Both gamepads: 3 blips |
-| 60 s left | Both gamepads: long rumble; banner `*** ENDGAME ***`; flower arm unlocked; idle light **blinks** the speed-mode color |
+| 60 s left | Both gamepads: long rumble; banner `*** ENDGAME ***`; FLOWER sweeper unlocked; idle light **blinks** the speed-mode color |
 | Battery low | Both gamepads rumble once, banner |
 | Indexer jam stop | gamepad2 rumbles until fire is released |
 | Robot full (4 elements, G407) | Collect refused (`Intake` FULL), gamepad1 short rumble, telemetry "FULL (gamepad1 X resets)" |
@@ -74,7 +75,7 @@ Lights while running (VA): firing → white (aligning) / solid yellow (feeding) 
 1. One OpMode per alliance instead of X/B in INIT: the alliance can no longer be forgotten,
    and the AUTO agent preselects "TeleOp Red"/"TeleOp Blue". This freed gamepad1 X and B.
 2. Iterative `OpMode` + subsystems + `hardware.clearBulkCache()` every loop (bulk caching is MANUAL).
-3. New: G407 gate, G408 rejection, G410 flower arm gate, endgame alerts/banner, auto-shoot,
+3. New: G407 gate, G408 rejection, G410 gate (now on the FLOWER sweeper), endgame alerts/banner, auto-shoot,
    competition telemetry, field-centric option, match CSV log, HIVE TIP counter on telemetry.
 4. Ball assist only turns toward POLLEN and our own NECTAR.
 5. Not ported: the VA `MotorDiagnosticsLogger`, `ShooterLogger` and `MatchSummary` files. The
@@ -114,7 +115,7 @@ Not duplicated: Test Pedro Pose, Test Odometry Square, Test Odometry Driver, Aut
    D-pad RPM). Loop time in DEBUG telemetry (Pinpoint read adds a few ms; set
    `USE_ODOMETRY_IN_TELEOP = false` if it hurts).
 3. gamepad2 A auto-shoot with 1–4 balls: stops by itself, manual input cancels it.
-4. Rumbles at 1:05 and 1:00; flower arm refused before 1:00, works after.
+4. Rumbles at 1:05 and 1:00; FLOWER sweeper lowering refused before 1:00, works after.
 5. G407: collect 4 balls → intake stops; check the count is right (Tune Color Sensor), X resets.
 6. G408: opponent NECTAR in front of the intake stops the intake (it must not push the ball).
 7. Field-centric: BACK while facing away from the drivers, then drive.
@@ -124,7 +125,7 @@ Not duplicated: Test Pedro Pose, Test Odometry Square, Test Odometry Driver, Aut
 
 ## Open questions
 
-1. Are the new buttons OK for the drivers (gamepad1 B flower arm, X count reset, BACK
+1. Are the new buttons OK for the drivers (gamepad1 B FLOWER sweeper, X count reset, BACK
    field-centric; gamepad2 A auto-shoot, BACK telemetry)?
 2. Field-centric "forward" is set by the driver (BACK). Should it come from the alliance and
    the field instead (needs the driver-station wall direction in the Pedro frame)?
@@ -132,3 +133,11 @@ Not duplicated: Test Pedro Pose, Test Odometry Square, Test Odometry Driver, Aut
 4. Auto-shoot uses POLLEN only (as `ShootingSequence`); is a NECTAR version needed for ENDGAME?
 5. Endgame rumble pattern (3 blips at 65 s, long at 60 s) — drivers to confirm.
 6. Shot marks are only in the CSV; port the VA `ShooterLogger` per-shot file if still used.
+
+## Source sync update (2026-11-25)
+
+The TeleOp changes of `vision-align` up to `d93cec3` are ported (details in
+`docs/SOURCE_SYNC.md` and `docs/agents/source-sync.md`): forward-only ball assist
+(`TeleOpLogic.shouldBallAssist`), POLLEN idle spin (gamepad2 right stick button), asymmetric
+feed window, intake jam protection, and the FLOWER sweeper on gamepad1 B (the flower arm is
+gone). The match CSV adds `intake_unjams` and `pollen_idle`.

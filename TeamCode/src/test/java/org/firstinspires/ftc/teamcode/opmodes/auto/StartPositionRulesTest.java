@@ -1,4 +1,4 @@
-// Sources: new for IronLion30311-HiveMind (BIOBUZZ Competition Manual TU10: G304 start rules, LEAVE / PARK, R102 size)
+// Sources: new for IronLion30311-HiveMind (BIOBUZZ Competition Manual TU10: G304 start rules, LEAVE / PARK, R102 size; wait-TIP route from vision-align @ f26f8d0)
 package org.firstinspires.ftc.teamcode.opmodes.auto;
 
 import static org.junit.Assert.assertFalse;
@@ -6,8 +6,11 @@ import static org.junit.Assert.assertTrue;
 
 import com.pedropathing.math.Pose;
 
+import org.firstinspires.ftc.teamcode.config.AutoConstants;
 import org.firstinspires.ftc.teamcode.config.FieldConstants;
 import org.firstinspires.ftc.teamcode.config.RobotConstants;
+import org.firstinspires.ftc.teamcode.pathing.paths.NearRoutePoses;
+import org.firstinspires.ftc.teamcode.pathing.paths.WaitTipPaths;
 import org.firstinspires.ftc.teamcode.testutil.RuleGeometry;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.junit.Test;
@@ -69,6 +72,22 @@ public class StartPositionRulesTest {
     }
 
     // ---------------- LEAVE + PARK at the end of AUTO ----------------
+
+    @Test
+    public void waitTipRouteKeepsTheRulesAndLeavesRoomForThePartner() {
+        // vision-align FarSideWaitTipAuto @ f26f8d0: back-wall start, park in the upper zone
+        assertTrue("touches the back wall (G304.C)", RuleGeometry.wallGap(WaitTipPaths.START) < 1e-9);
+        assertParkWithLeave("WaitTipPaths.PARK", WaitTipPaths.PARK);
+        double halfLength = RobotConstants.ROBOT_LENGTH_INCHES / 2.0;
+        assertTrue("our near park (low edge) and the wait-TIP park (top) do not overlap",
+                WaitTipPaths.PARK.y() - halfLength >= NearRoutePoses.PARK.y() + halfLength);
+        // The limited aim turn keeps the corners on our side of the territory line (G402)
+        double maxTurn = Math.toRadians(AutoConstants.WAIT_TIP_AIM_MAX_TURN_DEGREES);
+        for (double turn : new double[]{-maxTurn, maxTurn}) {
+            Pose aimed = new Pose(WaitTipPaths.LEAVE.x(), WaitTipPaths.LEAVE.y(), WaitTipPaths.LEAVE.heading() + turn);
+            assertFalse(TerritoryGuard.isPastLine(aimed, Alliance.RED));
+        }
+    }
 
     @Test
     public void safeParkFromBesideTheZoneLeavesAndParks() {

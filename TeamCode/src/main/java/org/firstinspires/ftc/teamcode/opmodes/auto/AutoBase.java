@@ -1,4 +1,5 @@
 // Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PedroAutoBase.java @ a7b8f4c (runOpMode: INIT alliance choice, A = re-zero, start-pose check, logs, stopAll; driveTo/settle/turnTo/holdTarget/lookForCell/watchForTip/shootPollenPreload helpers; applyMechanisms modes)
+//          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../opmodes/auto/PedroAutoBase.java @ 28ed859 (Pinpoint reboot recovery log) @ 023ae35 (Pinpoint health: INIT warning, fault at START stops the drive, log columns, summary)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/auto-leave-park / TeamCode/.../opmodes/auto/LeaveParkAuto.java @ e455142 (start delay)
 //          — adapted for BIOBUZZ (iterative OpMode, non-blocking steps, time-aware park, G402/G407/G408 guards)
 package org.firstinspires.ftc.teamcode.opmodes.auto;
@@ -15,6 +16,7 @@ import org.firstinspires.ftc.teamcode.pathing.AutoPlanner;
 import org.firstinspires.ftc.teamcode.pathing.FieldDrawing;
 import org.firstinspires.ftc.teamcode.pathing.OdometryDriver;
 import org.firstinspires.ftc.teamcode.pathing.PedroConstants;
+import org.firstinspires.ftc.teamcode.pathing.PinpointDiagnostics;
 import org.firstinspires.ftc.teamcode.pathing.PoseLogger;
 import org.firstinspires.ftc.teamcode.statemachine.ShootingSequence;
 import org.firstinspires.ftc.teamcode.statemachine.TipWatch;
@@ -28,6 +30,7 @@ import org.firstinspires.ftc.teamcode.subsystems.Lights;
 import org.firstinspires.ftc.teamcode.subsystems.Subsystem;
 import org.firstinspires.ftc.teamcode.subsystems.Vision;
 import org.firstinspires.ftc.teamcode.subsystems.vision.HiveCell;
+import org.firstinspires.ftc.teamcode.subsystems.vision.HiveClusterPose;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.GamepadEx;
 import org.firstinspires.ftc.teamcode.util.MatchTimer;
@@ -59,6 +62,9 @@ import java.util.function.DoubleSupplier;
  * <p>
  * <b>Guards</b>:
  * <ul>
+ *     <li>Odometry: a Pinpoint reboot (pose jump to (0, 0, 0)) is recovered by
+ *     {@link OdometryDriver}; any other jump, or a Pinpoint fault at START
+ *     ({@link PinpointDiagnostics}), stops the drive for the rest of AUTO.</li>
  *     <li>Time: when the park from here (see {@link EmergencyPark}) no longer fits before the
  *     end of AUTO with {@code AUTO_PARK_RESERVE_SECONDS} spare, the current step is cancelled,
  *     the mechanisms stop and the robot parks.</li>
@@ -96,6 +102,7 @@ public abstract class AutoBase extends OpMode {
     private static final int TELEMETRY_LOG_LINES = 6;
     /** Unit conversion (not a tuning value). */
     private static final double CM_PER_INCH = 2.54;
+    private static final double AIM_CM_PER_METER = 100.0;
 
     private final MatchTimer.Clock clock = MatchTimer.systemClock();
     private final StepSequence sequence = new StepSequence();
@@ -117,6 +124,8 @@ public abstract class AutoBase extends OpMode {
 
     private Follower follower;
     private OdometryDriver driver;
+    private PinpointDiagnostics pinpointDiagnostics;
+    private int loggedRecoveries;
     private String followerError = "";
 
     private AutoSelector selector;
@@ -190,6 +199,8 @@ public abstract class AutoBase extends OpMode {
         });
         shooting = ShootingSequence.forRobot(launcher, indexer, intake);
         tipWatch = TipWatch.forVision(vision);
+        pinpointDiagnostics = new PinpointDiagnostics(hardware.pinpoint);
+        poseLogger.setPinpointDiagnostics(pinpointDiagnostics);
 
         try {
             follower = PedroConstants.createFollower(hardwareMap);
@@ -230,6 +241,7 @@ public abstract class AutoBase extends OpMode {
         if (follower != null) {
             follower.update();
         }
+        pinpointDiagnostics.update();
         vision.periodic();
         lights.periodic();
         battery.periodic();
@@ -239,6 +251,11 @@ public abstract class AutoBase extends OpMode {
         telemetry.addData("Selected", selector.getSummary());
         telemetry.addData("Controls", selector.getControlsText());
         telemetry.addData("Odometry", describeStartPose());
+        telemetry.addData("Pinpoint", pinpointDiagnostics.summary());
+        if (pinpointDiagnostics.hasFault()) {
+            telemetry.addLine("!! PINPOINT FAULT: power-cycle the robot (battery out 10 s) before"
+                    + " the match; AUTO will not drive");
+        }
         if (!followerError.isEmpty()) {
             telemetry.addLine("WARNING: " + followerError);
         }
@@ -261,9 +278,14 @@ public abstract class AutoBase extends OpMode {
         elementCounter.setCount(LauncherConstants.PRELOAD_BALLS);
         if (follower != null) {
             follower.update();
+            pinpointDiagnostics.update();
             OdometryDriver.StartCheck check = driver.checkStartPose(startPose);
             startCheckText = driver.getResultText()
                     + (check == OdometryDriver.StartCheck.FAULT ? " -> robot will NOT drive" : "");
+            if (pinpointDiagnostics.hasFault()) {
+                driver.lockOdometry("Pinpoint fault at START (" + pinpointDiagnostics.summary() + ")");
+                startCheckText += "; PINPOINT FAULT -> robot will NOT drive (power-cycle it)";
+            }
         } else {
             startCheckText = "No odometry: robot will NOT drive";
         }
@@ -284,7 +306,13 @@ public abstract class AutoBase extends OpMode {
         if (follower != null) {
             follower.update();
         }
-        Pose pose = getPose();
+        pinpointDiagnostics.update();
+        // The driver's checked pose: after a Pinpoint reboot it is the restored pose, not (0, 0, 0)
+        Pose pose = driver != null ? driver.updatePose() : getPose();
+        if (driver != null && driver.getResetRecoveries() > loggedRecoveries) {
+            loggedRecoveries = driver.getResetRecoveries();
+            sequence.note(driver.getLastRecoveryText() + "; Pinpoint " + pinpointDiagnostics.summary());
+        }
         if (follower != null) {
             checkTerritory(pose);
             checkTimeToPark(pose);
@@ -320,6 +348,8 @@ public abstract class AutoBase extends OpMode {
         if (matchTimer.isStarted()) {
             // G407 hand-off: TeleOp starts from what the robot still holds.
             PoseStorage.saveElementCount(elementCounter.getCount());
+            sequence.note(pinpointDiagnostics.getMatchSummary() + ", reset recoveries "
+                    + (driver != null ? driver.getResetRecoveries() : 0));
         }
         for (Subsystem subsystem : subsystems) {
             subsystem.stop();
@@ -392,7 +422,18 @@ public abstract class AutoBase extends OpMode {
      * @return a pass-through leg (start the next leg right after it)
      */
     protected AutoStep driveThrough(String name, Pose target, Mode mode) {
-        return new DriveStep(name, DriveKind.DRIVE_THROUGH, target, DriveConstants.AUTO_MAX_POWER, 0.0, mode);
+        return driveThrough(name, target, DriveConstants.AUTO_MAX_POWER, mode);
+    }
+
+    /**
+     * @param name     leg name
+     * @param target   field waypoint passed without stopping
+     * @param maxPower top power
+     * @param mode     mechanisms during the leg
+     * @return a pass-through leg (start the next leg right after it)
+     */
+    protected AutoStep driveThrough(String name, Pose target, double maxPower, Mode mode) {
+        return new DriveStep(name, DriveKind.DRIVE_THROUGH, target, maxPower, 0.0, mode);
     }
 
     /**
@@ -440,16 +481,51 @@ public abstract class AutoBase extends OpMode {
      * @return the steps
      */
     protected List<AutoStep> parkSteps(String name, List<Pose> waypoints, boolean isStopEachLeg) {
+        return parkSteps(name, waypoints, isStopEachLeg, DriveConstants.AUTO_MAX_POWER);
+    }
+
+    /**
+     * Park legs at the power that parks by the deadline: {@link AutoPlanner#getParkPower} from
+     * the current pose (the normal power when there is time, up to {@code PARK_MAX_POWER} when
+     * late; vision-align 1e723f2). The plan is logged.
+     *
+     * @param name          leg name prefix
+     * @param waypoints     field waypoints, the last is PARK
+     * @param isStopEachLeg see {@link #parkSteps(String, List, boolean)}
+     * @return the steps
+     */
+    protected List<AutoStep> timedParkSteps(String name, List<Pose> waypoints, boolean isStopEachLeg) {
+        List<Pose> route = new ArrayList<>();
+        route.add(getPose());
+        route.addAll(waypoints);
+        double power = planner.getParkPower(route);
+        sequence.note(String.format(Locale.US, "Park plan at %.1f s: power %.2f, ~%.1f s, deadline %.1f s",
+                matchTimer.getElapsedSeconds(), power, AutoPlanner.estimateRouteSeconds(power, route),
+                AutoPlanner.getParkDeadlineSeconds()));
+        return parkSteps(name, waypoints, isStopEachLeg, power);
+    }
+
+    /**
+     * Park legs: mark parking, the legs, settle and hold.
+     *
+     * @param name          leg name prefix
+     * @param waypoints     field waypoints, the last is PARK
+     * @param isStopEachLeg see {@link #parkSteps(String, List, boolean)}
+     * @param power         top power of every leg
+     * @return the steps
+     */
+    protected List<AutoStep> parkSteps(String name, List<Pose> waypoints, boolean isStopEachLeg,
+                                       double power) {
         List<AutoStep> steps = new ArrayList<>();
         steps.add(markParking());
         for (int i = 0; i < waypoints.size(); i++) {
             String legName = String.format(Locale.US, "%s leg %d/%d", name, i + 1, waypoints.size());
             boolean isLast = i == waypoints.size() - 1;
             if (isStopEachLeg || isLast) {
-                steps.add(driveTo(legName, waypoints.get(i), Mode.IDLE));
+                steps.add(driveTo(legName, waypoints.get(i), power, Mode.IDLE));
                 steps.add(settle(AutoConstants.SETTLE_SECONDS, Mode.IDLE));
             } else {
-                steps.add(driveThrough(legName, waypoints.get(i), Mode.IDLE));
+                steps.add(driveThrough(legName, waypoints.get(i), power, Mode.IDLE));
             }
         }
         steps.add(holdParked());
@@ -592,6 +668,74 @@ public abstract class AutoBase extends OpMode {
     }
 
     /**
+     * Holds the spot and waits until {@code cell} is in view and still: its tags seen for
+     * {@code stableSec} with the camera-to-cell distance changing less than {@code maxMoveCm}
+     * (the HIVE stopped moving after a TIP). Gives up at a match time read when the step starts.
+     * Afterwards {@link #wasCellSeen()} tells whether the cell came up (vision-align f26f8d0).
+     *
+     * @param name              step name
+     * @param cell              the cell to wait for
+     * @param giveUpSecSupplier match time to give up at, read at start
+     * @param mode              mechanisms meanwhile (for example SPIN_UP to pre-spin)
+     * @return the step
+     */
+    protected AutoStep waitForStableCell(String name, final HiveCell cell, final DoubleSupplier giveUpSecSupplier,
+                                         final Mode mode) {
+        return new AutoStep(name) {
+            private double giveUpSec;
+            private double stableStartSec = Double.NaN;
+            private double minMeters;
+            private double maxMeters;
+
+            @Override
+            public void start() {
+                giveUpSec = giveUpSecSupplier.getAsDouble();
+                wasCellSeen = false;
+                applyMode(mode);
+                holdHere();
+            }
+
+            @Override
+            public void periodic() {
+                HiveClusterPose pose = getCellPose(cell);
+                double nowSec = clock.nowSeconds();
+                if (pose == null) {
+                    stableStartSec = Double.NaN;
+                    return;
+                }
+                double meters = distanceMeters(pose);
+                boolean isMoving = !Double.isNaN(stableStartSec)
+                        && (Math.max(maxMeters, meters) - Math.min(minMeters, meters)) * AIM_CM_PER_METER
+                        > AutoConstants.WAIT_TIP_STABLE_MAX_MOVE_CM;
+                if (Double.isNaN(stableStartSec) || isMoving) {
+                    // (Re)start the stable window from this frame
+                    stableStartSec = nowSec;
+                    minMeters = meters;
+                    maxMeters = meters;
+                    return;
+                }
+                minMeters = Math.min(minMeters, meters);
+                maxMeters = Math.max(maxMeters, meters);
+                if (nowSec - stableStartSec >= AutoConstants.WAIT_TIP_STABLE_SECONDS) {
+                    wasCellSeen = true;
+                }
+            }
+
+            @Override
+            public boolean isDone() {
+                return wasCellSeen || matchTimer.getElapsedSeconds() >= giveUpSec;
+            }
+
+            @Override
+            public String getResultText() {
+                return String.format(Locale.US, "%s: %s at %.1f s", getName(),
+                        wasCellSeen ? cell.getDisplayName() + " UP and still" : "gave up (no TIP seen)",
+                        matchTimer.getElapsedSeconds());
+            }
+        };
+    }
+
+    /**
      * @param name    step name
      * @param seconds how long to wait (robot still, mechanisms as they are)
      * @return the step
@@ -671,6 +815,14 @@ public abstract class AutoBase extends OpMode {
     /** @return the time-budget planner */
     protected AutoPlanner getPlanner() {
         return planner;
+    }
+
+    /**
+     * @param cell a HIVE cell
+     * @return its tag cluster pose (camera frame) if it is in the latest frame, else null
+     */
+    protected HiveClusterPose getCellPose(HiveCell cell) {
+        return vision.isCellInView(cell) ? vision.getPose(cell) : null;
     }
 
     /** @return the Limelight subsystem */
@@ -797,7 +949,10 @@ public abstract class AutoBase extends OpMode {
             telemetry.addLine("DRIVE STOPPED by the G402 territory guard");
         }
         if (driver != null && driver.isOdometryLost()) {
-            telemetry.addLine("ODOMETRY LOST: drive stopped");
+            telemetry.addLine("ODOMETRY LOST: drive stopped (Pinpoint " + pinpointDiagnostics.summary() + ")");
+        }
+        if (driver != null && driver.getResetRecoveries() > 0) {
+            telemetry.addData("Pinpoint resets recovered", driver.getResetRecoveries());
         }
         if (isParking) {
             telemetry.addLine("Parking");
@@ -810,6 +965,127 @@ public abstract class AutoBase extends OpMode {
             telemetry.addLine(log.get(i));
         }
         telemetry.addData("Log", poseLogger.getFileName());
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // Limelight aim (vision-align 4fd2293 / f26f8d0)
+    // ------------------------------------------------------------------------------------------
+
+    /**
+     * Limelight aim (vision-align 4fd2293 / f26f8d0, UNTESTED): turn, then move along the
+     * launcher axis, until {@code cell} is seen at the bearing and distance of a volley that
+     * scores. Each step is skipped if the cell is not in view; the corrections are limited by the
+     * {@code AIM_*} constants and {@code maxTurnDegrees}.
+     *
+     * @param cell                 the cell to aim at
+     * @param targetBearingDegrees bearing that scored (+ = right of the crosshair)
+     * @param targetDistanceMeters camera-to-cell distance that scored
+     * @param maxTurnDegrees       largest aim turn (smaller near the territory line, G402)
+     * @return the aim steps (they add their moves while they run)
+     */
+    protected List<AutoStep> aimSteps(final HiveCell cell, final double targetBearingDegrees,
+                                      final double targetDistanceMeters, final double maxTurnDegrees) {
+        return new ArrayList<>(Arrays.asList(
+                AutoStep.instant("Aim turn", new Runnable() {
+                    @Override
+                    public void run() {
+                        HiveClusterPose pose = getCellPose(cell);
+                        if (pose == null) {
+                            return;
+                        }
+                        double turnDegrees = aimTurnDegrees(bearingDegrees(pose), targetBearingDegrees, maxTurnDegrees);
+                        if (Math.abs(turnDegrees) > AutoConstants.AIM_MIN_TURN_DEGREES) {
+                            getSequence().addNext(
+                                    turnTo(String.format(Locale.US, "Aim turn %.1f deg (bearing %.1f -> %.1f)",
+                                                    turnDegrees, bearingDegrees(pose), targetBearingDegrees),
+                                            getPose().heading() + Math.toRadians(turnDegrees), Mode.SPIN_UP),
+                                    settle(AutoConstants.SETTLE_SECONDS, Mode.SPIN_UP));
+                        }
+                    }
+                }),
+                AutoStep.instant("Aim distance", new Runnable() {
+                    @Override
+                    public void run() {
+                        HiveClusterPose pose = getCellPose(cell);
+                        if (pose == null) {
+                            return;
+                        }
+                        double moveCm = aimMoveCm(distanceMeters(pose), targetDistanceMeters);
+                        if (Math.abs(moveCm) > AutoConstants.AIM_MIN_MOVE_CM) {
+                            getSequence().addNext(
+                                    driveTo(String.format(Locale.US, "Aim distance %.0f cm (%.2f -> %.2f m)",
+                                            moveCm, distanceMeters(pose), targetDistanceMeters),
+                                            movedTowardRear(getPose(), moveCm), Mode.SPIN_UP),
+                                    settle(AutoConstants.SETTLE_SECONDS, Mode.SPIN_UP));
+                        }
+                    }
+                }),
+                AutoStep.instant("Aim result", new Runnable() {
+                    @Override
+                    public void run() {
+                        HiveClusterPose pose = getCellPose(cell);
+                        getSequence().note(pose == null ? "Aim: cell out of view after aiming"
+                                : String.format(Locale.US, "Aim: bearing %.1f deg (target %.1f), distance %.2f m (target %.2f)",
+                                bearingDegrees(pose), targetBearingDegrees, distanceMeters(pose), targetDistanceMeters));
+                    }
+                })));
+    }
+
+    /**
+     * @param pose a cell's tag cluster in the camera frame
+     * @return its bearing from the camera axis, degrees (+ = right of the crosshair)
+     */
+    static double bearingDegrees(HiveClusterPose pose) {
+        return Math.toDegrees(Math.atan2(pose.strafeMeters, pose.forwardMeters));
+    }
+
+    /**
+     * @param pose a cell's tag cluster in the camera frame
+     * @return camera-to-cell floor distance, meters
+     */
+    static double distanceMeters(HiveClusterPose pose) {
+        return Math.hypot(pose.forwardMeters, pose.strafeMeters);
+    }
+
+    /**
+     * @param bearingDegrees       bearing of the cell now
+     * @param targetBearingDegrees bearing that scored
+     * @return the aim turn, degrees counter-clockwise, limited to {@code AIM_MAX_TURN_DEGREES}
+     */
+    static double aimTurnDegrees(double bearingDegrees, double targetBearingDegrees) {
+        return aimTurnDegrees(bearingDegrees, targetBearingDegrees, AutoConstants.AIM_MAX_TURN_DEGREES);
+    }
+
+    /**
+     * @param bearingDegrees       bearing of the cell now
+     * @param targetBearingDegrees bearing that scored
+     * @param maxTurnDegrees       largest turn
+     * @return the aim turn, degrees counter-clockwise, limited to {@code maxTurnDegrees}
+     */
+    static double aimTurnDegrees(double bearingDegrees, double targetBearingDegrees, double maxTurnDegrees) {
+        double turn = AutoConstants.AIM_TURN_SIGN * (bearingDegrees - targetBearingDegrees);
+        return Math.max(-maxTurnDegrees, Math.min(maxTurnDegrees, turn));
+    }
+
+    /**
+     * @param distanceMeters       camera-to-cell distance now
+     * @param targetDistanceMeters distance that scored
+     * @return the move toward the cell, cm (negative = away from it, toward the FLOWER), limited
+     */
+    static double aimMoveCm(double distanceMeters, double targetDistanceMeters) {
+        double moveCm = (distanceMeters - targetDistanceMeters) * AIM_CM_PER_METER;
+        return Math.max(-AutoConstants.AIM_MAX_AWAY_CM, Math.min(AutoConstants.AIM_MAX_TOWARD_CM, moveCm));
+    }
+
+    /**
+     * @param pose   field pose of the robot
+     * @param moveCm distance to move toward the rear (the launcher and the Limelight face the cell)
+     * @return the field pose {@code moveCm} behind {@code pose}, same heading
+     */
+    static Pose movedTowardRear(Pose pose, double moveCm) {
+        double moveInches = moveCm / CM_PER_INCH;
+        return new Pose(pose.x() - Math.cos(pose.heading()) * moveInches,
+                pose.y() - Math.sin(pose.heading()) * moveInches, pose.heading());
     }
 
     /** A drive move with the odometry driver. */
@@ -843,7 +1119,7 @@ public abstract class AutoBase extends OpMode {
                     driver.driveTo(getName(), target, maxPower);
                     break;
                 case DRIVE_THROUGH:
-                    driver.driveThrough(getName(), target);
+                    driver.driveThrough(getName(), target, maxPower);
                     break;
                 case TURN:
                     driver.turnTo(getName(), value);

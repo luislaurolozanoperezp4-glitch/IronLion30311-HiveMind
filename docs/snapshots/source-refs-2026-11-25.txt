@@ -1,0 +1,57 @@
+# GitHub remote refs of ironlionrobotics/IronLion30311BIOBUZZInicioDeTemporada
+# Recorded 2026-11-25 by the source-sync agent (ls-remote). HiveMind is synced to
+# feature/turrubiates/vision-align @ d93cec3. master @ c98a668 has the same tree (PR #15/#16).
+# Previous snapshot: source-refs-2026-11-24.txt. Per-commit decisions: docs/SOURCE_SYNC.md.
+c98a668f0237007d504696e8af598fae024c26b4	HEAD
+55f69ad795a822111ef1e6ec8c21b2e721c1cced	refs/heads/Balls-counting
+2eb4c5960dedfdc96300160ae9774a75f6ca77cd	refs/heads/CSV
+6b8ac1e324864615c13cc3970f06409105baecf2	refs/heads/PID
+9734d9ca08669ddfbe7da94f19262cde772fa786	refs/heads/SIT
+afbabf16b6fc4d8522aed875c64d8593d59cbbee	refs/heads/Stop-servo
+6f297f104832a36f7ea5342f17ba1494648a85b3	refs/heads/csv
+afbabf16b6fc4d8522aed875c64d8593d59cbbee	refs/heads/develop
+206fa846c68339c0137aba2f70b71696209d1dd7	refs/heads/feature/autonomos-beta
+64a15047dccdf8b3b3b7c7af2f3ad91b91eb4db5	refs/heads/feature/luis/alliance
+9cf2c66c7990e626d2a7143dac7bfb440f0bc0d1	refs/heads/feature/luis/autonomospaths
+b9c6e12d6a7869b03718102b3c14e9b868cd962b	refs/heads/feature/luis/naming
+a8c4215d70b0b8cc48e6ace54875dda11285624f	refs/heads/feature/luis/park
+e9ef5bbb889deaaf7dc9b30ec8df204db39a5701	refs/heads/feature/luis/probe
+ff402343037c495bf8c3738676f193a9eb0cfdbc	refs/heads/feature/luis/shooters-upgraded
+38caa7fbbc89f672735c9197aa6c6302aafdb9c5	refs/heads/feature/mar/duopodrive
+2d92fba7810f3813d15183e913066690a6804758	refs/heads/feature/mar/duopodriveNcam
+898e0dad7f7dfcca0544690554c22cfad9c56cfc	refs/heads/feature/mar/onepodrive
+dae149e4c7cc65fb68eef3ddd19fe8fac00073ef	refs/heads/feature/mar/vision
+3e733d4d1fcde9c4daeda25bb840a9b274568491	refs/heads/feature/renata/auto-align
+7c1e75ad460d822e8f9e64ca22546cdff11c06ec	refs/heads/feature/renata/auto-test
+889102d495dd9cf4f2ec844de132a871108d000e	refs/heads/feature/renata/flower-arm
+89d97d011912bb304bf99149c60f1d0113311436	refs/heads/feature/renata/removing-Alejandro
+10331bd96a2e6529987ca610d149a232f0fa4d46	refs/heads/feature/renata/shooter
+125df22f6322a7c6334bb61d58ae92c9fd8fc4d2	refs/heads/feature/theautonomous
+e4551424bac7ec1ad5e50df652543af4b05d2a18	refs/heads/feature/turrubiates/auto-leave-park
+c17992f74df697a5fe9682eb7ab3fb84a016208d	refs/heads/feature/turrubiates/hive-alliance-target
+6fbf6e81d86b4aa26a4af62f15eedb184385dd5a	refs/heads/feature/turrubiates/hive-state-probe
+ea8f5a12e7fb4a5a6c842331c4ef295b0cfe1d7a	refs/heads/feature/turrubiates/naming-conventions
+d93cec3f600d4050319949e4056ce35202271d68	refs/heads/feature/turrubiates/vision-align
+c98a668f0237007d504696e8af598fae024c26b4	refs/heads/master
+1f0c54155c91835cccdad31448b32bc139cb09e8	refs/pull/1/head
+e4551424bac7ec1ad5e50df652543af4b05d2a18	refs/pull/10/head
+4769ed2d948b95e7212b28a21d27e5d55abbae95	refs/pull/10/merge
+6fbf6e81d86b4aa26a4af62f15eedb184385dd5a	refs/pull/11/head
+9341f107bb7627bf922796a1ac24d993be052535	refs/pull/11/merge
+c17992f74df697a5fe9682eb7ab3fb84a016208d	refs/pull/12/head
+d245bcd85c6772681498926a216c7a9884f6e7ce	refs/pull/12/merge
+72387dfe0ef02c2cee3d738b5b0638dcb2389aa8	refs/pull/13/head
+206fa846c68339c0137aba2f70b71696209d1dd7	refs/pull/14/head
+2c6585319180415567994f8e665f8996514278bc	refs/pull/15/head
+d93cec3f600d4050319949e4056ce35202271d68	refs/pull/16/head
+810c857a00825c7a9d2ee21c5e7dbff7727f0d64	refs/pull/2/head
+9cf2c66c7990e626d2a7143dac7bfb440f0bc0d1	refs/pull/3/head
+ed7571913bd132118df26be490ec08b64af46de7	refs/pull/3/merge
+491c200cc767240a7fe8bb9bfacd35b8312917e0	refs/pull/4/head
+ff402343037c495bf8c3738676f193a9eb0cfdbc	refs/pull/5/head
+69b9fa8a770bfd86a46f02c6496fcd8475eb5bdf	refs/pull/5/merge
+bc0012195ec31f9919529eb8269627711408dfcc	refs/pull/6/head
+9734d9ca08669ddfbe7da94f19262cde772fa786	refs/pull/7/head
+dae149e4c7cc65fb68eef3ddd19fe8fac00073ef	refs/pull/8/head
+ea8f5a12e7fb4a5a6c842331c4ef295b0cfe1d7a	refs/pull/9/head
+85cb8f0f3ea3997ac01ef06149e32bbf87d99880	refs/pull/9/merge

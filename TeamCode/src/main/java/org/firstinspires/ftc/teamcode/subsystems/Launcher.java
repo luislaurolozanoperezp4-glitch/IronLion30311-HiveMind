@@ -1,4 +1,4 @@
-// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/Shooter.java @ a7b8f4c (fire/reverse/stop per flywheel, updateReady hysteresis, compensateForVoltage, applyPidf, RPM conversion, clampRpm, setTargetRpmP)
+// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/vision-align / TeamCode/.../subsystems/Shooter.java @ a7b8f4c (fire/reverse/stop per flywheel, updateReady hysteresis, compensateForVoltage, applyPidf, RPM conversion, clampRpm, setTargetRpmP) @ 854de85 (pollen idle spin: setPollenIdle, isPollenIdleEnabled, off in stop) @ 19de992 (asymmetric feed window in updateReady)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch master / TeamCode/.../subsystems/Shooter.java @ 37b7a16 (setTargetRpm(p, n), atTargetRPM -> isAtTargetRpm)
 //          IronLion30311BIOBUZZInicioDeTemporada / branch feature/renata/auto-align / TeamCode/.../subsystems/Shooter.java @ 3e733d4 (idle pre-spin idea, off by default)
 //          — adapted for BIOBUZZ (renamed Shooter -> Launcher; gamepad logic moved out; shot detection from ShooterLogger)
@@ -24,10 +24,15 @@ import java.util.function.DoubleSupplier;
  * voltage ({@code F = KF_AT_12V * 12 / volts}), so the same command gives the same RPM on a full
  * or a tired battery. All gains are TESTED on the robot (see {@link LauncherConstants}).
  * <p>
- * A flywheel is "ready" once within {@link LauncherConstants#READY_TOLERANCE_RPM} of its target,
- * and stops being ready only when it falls more than
+ * A flywheel is "ready" (the indexer may feed) once it is inside the asymmetric feed window
+ * [target - {@link LauncherConstants#READY_BELOW_RPM}, target +
+ * {@link LauncherConstants#READY_ABOVE_RPM}], and stops being ready only when it is more than
  * {@link LauncherConstants#NOT_READY_TOLERANCE_RPM} away (hysteresis, so it does not flicker).
  * Each RPM dip is counted as a shot ({@link ShotDetector}).
+ * <p>
+ * <b>POLLEN idle spin</b> ({@link #setPollenIdle(boolean)}, TeleOp only): while it is on, a
+ * POLLEN flywheel that is not firing or reversing keeps {@link LauncherConstants#POLLEN_IDLE_RPM}
+ * so the next volley is ready sooner. It stays in state {@code IDLE}: never ready, no shots.
  * <p>
  * Call {@link #spinUpPollen()} etc. to say what you want, then {@link #periodic()} every loop.
  */
@@ -51,6 +56,7 @@ public class Launcher implements Subsystem {
     private double nectarTargetRpm = LauncherConstants.NECTAR_RPM;
     private boolean isPollenReady = false;
     private boolean isNectarReady = false;
+    private boolean isPollenIdleEnabled = false;
     private PIDFCoefficients appliedPidf = new PIDFCoefficients();
     private double lastKfUpdateSec = Double.NaN;
     private double lastPollenVelocity = Double.NaN;
@@ -97,7 +103,10 @@ public class Launcher implements Subsystem {
         pollenState = FlywheelState.REVERSING;
     }
 
-    /** Lets the POLLEN flywheel coast down (or run at {@link LauncherConstants#IDLE_RPM}). */
+    /**
+     * Lets the POLLEN flywheel coast down (or keep {@link LauncherConstants#POLLEN_IDLE_RPM}
+     * while the idle spin is on, else {@link LauncherConstants#IDLE_RPM}).
+     */
     public void stopPollen() {
         pollenState = FlywheelState.IDLE;
     }
@@ -117,9 +126,25 @@ public class Launcher implements Subsystem {
         nectarState = FlywheelState.IDLE;
     }
 
-    /** Stops both flywheels right away (they coast). Keeps the target RPMs. */
+    /**
+     * Turns the POLLEN idle spin on or off (TeleOp). The OpMode turns it off while the battery is
+     * low. AUTO never turns it on: the routine spins up on its own.
+     *
+     * @param isEnabled true to keep {@link LauncherConstants#POLLEN_IDLE_RPM} between volleys
+     */
+    public void setPollenIdle(boolean isEnabled) {
+        isPollenIdleEnabled = isEnabled;
+    }
+
+    /** @return true while the POLLEN idle spin is on */
+    public boolean isPollenIdleEnabled() {
+        return isPollenIdleEnabled;
+    }
+
+    /** Stops both flywheels right away (they coast) and turns the idle spin off. Keeps the targets. */
     @Override
     public void stop() {
+        isPollenIdleEnabled = false;
         pollenState = FlywheelState.IDLE;
         nectarState = FlywheelState.IDLE;
         setPollenVelocity(0.0);
@@ -170,8 +195,11 @@ public class Launcher implements Subsystem {
         double nowSec = clock.nowSeconds();
         compensateForVoltage(nowSec);
 
-        setPollenVelocity(rpmToTicksPerSecond(commandRpm(pollenState, pollenTargetRpm)));
-        setNectarVelocity(rpmToTicksPerSecond(commandRpm(nectarState, nectarTargetRpm)));
+        double pollenIdleRpm = isPollenIdleEnabled ? LauncherConstants.POLLEN_IDLE_RPM
+                : LauncherConstants.IDLE_RPM;
+        setPollenVelocity(rpmToTicksPerSecond(commandRpm(pollenState, pollenTargetRpm, pollenIdleRpm)));
+        setNectarVelocity(rpmToTicksPerSecond(commandRpm(nectarState, nectarTargetRpm,
+                LauncherConstants.IDLE_RPM)));
 
         pollenRpm = pollenMotor == null ? 0.0 : ticksPerSecondToRpm(pollenMotor.getVelocity());
         nectarRpm = nectarMotor == null ? 0.0 : ticksPerSecondToRpm(nectarMotor.getVelocity());
@@ -186,7 +214,11 @@ public class Launcher implements Subsystem {
     }
 
     /**
-     * Readiness of one flywheel, with hysteresis.
+     * Readiness of one flywheel, with hysteresis: it becomes ready only inside the asymmetric
+     * feed window [target - {@link LauncherConstants#READY_BELOW_RPM}, target +
+     * {@link LauncherConstants#READY_ABOVE_RPM}], and stays ready until it is more than
+     * {@link LauncherConstants#NOT_READY_TOLERANCE_RPM} off. A shot dip ends readiness, so the
+     * next ball waits for the window again.
      *
      * @param wasReady  readiness last loop
      * @param isFiring  true if the flywheel is spinning forward
@@ -199,10 +231,12 @@ public class Launcher implements Subsystem {
         if (!isFiring) {
             return false;
         }
-        double errorRpm = Math.abs(rpm - targetRpm);
-        double tolerance = wasReady ? LauncherConstants.NOT_READY_TOLERANCE_RPM
-                : LauncherConstants.READY_TOLERANCE_RPM;
-        return errorRpm <= tolerance;
+        double errorRpm = rpm - targetRpm;
+        if (wasReady) {
+            return Math.abs(errorRpm) <= LauncherConstants.NOT_READY_TOLERANCE_RPM;
+        }
+        return errorRpm >= -LauncherConstants.READY_BELOW_RPM
+                && errorRpm <= LauncherConstants.READY_ABOVE_RPM;
     }
 
     /**
@@ -330,6 +364,8 @@ public class Launcher implements Subsystem {
         t.addData("Launcher NECTAR", "%s %.0f / %.0f RPM%s, shots %d", nectarState, nectarRpm,
                 nectarTargetRpm, isNectarReady ? " READY" : "", getNectarShotCount());
         t.addData("Launcher kF", "%.2f", appliedPidf.f);
+        t.addData("Launcher POLLEN idle", "%s", isPollenIdleEnabled
+                ? "ON " + Math.round(LauncherConstants.POLLEN_IDLE_RPM) + " RPM" : "off");
         if (!isConnected()) {
             t.addLine("Launcher: flywheel motor missing");
         }
@@ -337,14 +373,14 @@ public class Launcher implements Subsystem {
 
     // ---------------- Internals ----------------
 
-    private static double commandRpm(FlywheelState state, double targetRpm) {
+    private static double commandRpm(FlywheelState state, double targetRpm, double idleRpm) {
         switch (state) {
             case FIRING:
                 return targetRpm;
             case REVERSING:
                 return -targetRpm;
             default:
-                return LauncherConstants.IDLE_RPM;
+                return idleRpm;
         }
     }
 
