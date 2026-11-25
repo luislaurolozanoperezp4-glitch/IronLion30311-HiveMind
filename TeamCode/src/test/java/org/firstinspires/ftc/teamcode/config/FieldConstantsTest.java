@@ -5,6 +5,8 @@ import static org.junit.Assert.assertTrue;
 
 import com.pedropathing.math.Pose;
 
+import org.firstinspires.ftc.teamcode.testutil.RuleGeometry;
+
 import org.junit.Test;
 
 /** Sanity checks that the RED field poses respect the AUTO territory rule (G402). */
@@ -27,11 +29,18 @@ public class FieldConstantsTest {
     }
 
     @Test
-    public void parkIsInsideRedLoadingZone() {
+    public void parkIsPartlyInRedLoadingZoneAndOffTheWall() {
         Pose park = FieldConstants.RED_PARK;
-        assertTrue(park.x() > FieldConstants.RED_LOADING_ZONE_MIN_X
-                && park.x() < FieldConstants.RED_LOADING_ZONE_MAX_X);
-        assertTrue(park.y() > FieldConstants.RED_LOADING_ZONE_MIN_Y
-                && park.y() < FieldConstants.RED_LOADING_ZONE_MAX_Y);
+        assertTrue("PARK: partly in the zone", RuleGeometry.overlapsRedLoadingZone(park));
+        assertTrue("LEAVE: off the wall", RuleGeometry.wallGap(park) >= FieldConstants.WALL_CLEARANCE_INCHES - 1e-9);
+    }
+
+    /** Manual TU10 9.3: LOADING ZONE ~23 in wide x 11 in deep, against the red wall. */
+    @Test
+    public void loadingZoneMatchesTheManual() {
+        assertTrue(Math.abs(FieldConstants.RED_LOADING_ZONE_MAX_X - FieldConstants.RED_LOADING_ZONE_MIN_X - 11.0) < 1e-9);
+        assertTrue(Math.abs(FieldConstants.RED_LOADING_ZONE_MAX_Y - FieldConstants.RED_LOADING_ZONE_MIN_Y - 23.0) < 1e-9);
+        assertTrue(FieldConstants.RED_LOADING_ZONE_MIN_X == 0.0);
+        assertTrue("Red side is columns A-C", FieldConstants.TERRITORY_LINE_X == 3 * FieldConstants.TILE_INCHES);
     }
 }

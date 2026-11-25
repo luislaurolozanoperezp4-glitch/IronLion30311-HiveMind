@@ -1,4 +1,4 @@
-// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/auto-leave-park / TeamCode/.../opmodes/auto/LeaveParkAuto.java @ e455142 (LEAVE + PARK from inside the LOADING ZONE, start delay, light result)
+// Sources: IronLion30311BIOBUZZInicioDeTemporada / branch feature/turrubiates/auto-leave-park / TeamCode/.../opmodes/auto/LeaveParkAuto.java @ e455142 (LEAVE + PARK from inside the LOADING ZONE, start delay, light result; start moved out of the zone for G304.E)
 //          — adapted for BIOBUZZ (iterative OpMode, wheel encoders only)
 package org.firstinspires.ftc.teamcode.opmodes.auto;
 
@@ -14,13 +14,16 @@ import org.firstinspires.ftc.teamcode.util.MatchTimer;
 import org.firstinspires.ftc.teamcode.util.PoseStorage;
 
 /**
- * Fallback auto that needs no Pinpoint, no Pedro and no cameras: LEAVE (3 points) and PARK
- * (5 points) on the wheel encoders only. Use it when the odometry is broken.
+ * Fallback auto that needs no Pinpoint, no Pedro and no cameras: LEAVE (3 points) on the wheel
+ * encoders only. Use it when the odometry is broken.
  * <p>
- * <b>Setup:</b> place the robot inside our LOADING ZONE with the front (intake) touching the
- * side wall. It drives backwards {@link AutoConstants#ENCODER_LEAVE_CM} so it no longer touches
- * the wall (LEAVE) while its front stays in the zone (PARK). A hard timeout keeps it in the zone
- * even if the encoders fail ({@link GuardedLeaveMove}).
+ * <b>Setup:</b> place the robot with the front (intake) touching the red side wall, just behind
+ * the LOADING ZONE tape (fully outside the zone). It drives backwards
+ * {@link AutoConstants#ENCODER_LEAVE_CM} so it no longer touches the wall (LEAVE). A hard timeout
+ * limits the move if the encoders fail ({@link GuardedLeaveMove}).
+ * <p>
+ * <b>Rules:</b> it used to start inside the LOADING ZONE to also score PARK, but G304.E (manual
+ * TU10) forbids starting in the LOADING ZONE, so this auto now scores LEAVE only.
  * <p>
  * INIT (gamepad1): B = RED, X = BLUE (light color only), D-pad up / down = start delay.
  * Light after the move: green = distance reached, red = timed out (check the robot position).
@@ -78,7 +81,7 @@ public class AutoSafeParkEncoders extends OpMode {
             }
         }
         lights.periodic();
-        telemetry.addLine("Setup: inside the LOADING ZONE, front (intake) against the side wall");
+        telemetry.addLine("Setup: front (intake) against the side wall, BEHIND the LOADING ZONE tape (G304.E)");
         telemetry.addData("Selected", selector.getSummary());
         telemetry.addData("Controls", "gamepad1: B = RED, X = BLUE | D-pad Up/Down = delay");
         for (String warning : hardware.getWarnings()) {
@@ -118,7 +121,7 @@ public class AutoSafeParkEncoders extends OpMode {
         lights.periodic();
         telemetry.addData("State", !hasStarted ? String.format("Start delay (%.1f s left)",
                 selector.getStartDelaySeconds() - elapsed)
-                : leaveMove.isDone() ? "Done: holding in the LOADING ZONE" : "LEAVE move");
+                : leaveMove.isDone() ? "Done: holding off the wall (LEAVE)" : "LEAVE move");
         telemetry.addData("LEAVE", leaveMove.getResultText());
     }
 
